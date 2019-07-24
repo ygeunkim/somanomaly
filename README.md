@@ -11,8 +11,4 @@ Given multivariate time series, we are trying to outlying pattern. This represen
 1. Slide window
 2. Bind the windows
 
-Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set.
-
-![](docs/input_mat.png)
-
-Different with ordinary SOM structure, we use input **matrices**, not vectors.
+Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set. Different with ordinary SOM structure, we use input **matrices**, not vectors.
