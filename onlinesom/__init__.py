@@ -32,7 +32,7 @@ class kohonen:
         :param ydim: Number of y-grid
         :param topo: Topology of output space - rectangular or hexagonal
         :param neighbor: Neighborhood function - gaussian or bubble
-        :param dist: Distance function - frobenius or
+        :param dist: Distance function - frobenius, pca, or
         """
         self.net_dim = np.array([xdim, ydim])
         self.ncol = data.shape[2]
@@ -52,7 +52,7 @@ class kohonen:
             raise ValueError("Invalid neighbor. Expected one of: %s" % neighbor_types)
         self.neighbor_func = neighbor
         # Distance function
-        dist_type = ["frobenius"]
+        dist_type = ["frobenius", "pca"]
         if dist not in dist_type:
             raise ValueError("Invalid dist. Expected one of: %s" % dist_type)
         self.dist_func = dist
@@ -83,7 +83,6 @@ class kohonen:
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
-        :return:
         """
         num_obs = data.shape[0]
         obs_id = np.arange(num_obs)
@@ -126,10 +125,10 @@ class kohonen:
         :param data: Processed data set for SOM.
         :return: Best Matching Unit index for each observation index (in order)
         """
-        dist_code = [None] * self.net.shape[0]
-        bmu_id = [None] * data.shape[0]
+        dist_code = np.empty(self.net.shape[0]) # node length
+        bmu_id = np.empty(data.shape[0]) # observation length
         for i in range(1, data.shape[0] + 1):
-            dist_code = [self.dist_mat(data, i - 1, j - 1) for j in range(1, self.net.shape[0] + 1)]
+            dist_code = np.asarray([self.dist_mat(data, i - 1, j - 1) for j in range(1, self.net.shape[0] + 1)])
             bmu_id[i - 1] = np.argmin(dist_code)
         self.bmu = bmu_id
 
@@ -143,7 +142,12 @@ class kohonen:
         if self.dist_func == "frobenius":
             return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "fro")
         else:
-            return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "fro")
+            u_data, d_data, vt_data = np.linalg.svd(data[index - 1, :, :], full_matrices= False)
+            u_net, d_net, vt_net = np.linalg.svd(self.net[node, :, :], full_matrices = False)
+            pc_data = np.dot(u_data, d_data)
+            pc_net = np.dot(u_net, d_net)
+            lmt = np.dot(pc_data, pc_net.T)
+            return np.trace(np.dot(lmt, lmt.T))
 
     def dist_node(self):
         """
