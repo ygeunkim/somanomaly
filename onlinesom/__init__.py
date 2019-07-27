@@ -65,7 +65,7 @@ class kohonen:
         self.bmu = None
 
     def init_weight(self):
-        self.net = np.random.rand(self.net_dim[0] + self.net_dim[1], self.ncol, self.nrow)
+        self.net = np.random.rand(self.net_dim[0] + self.net_dim[1], self.nrow, self.ncol)
 
     def init_grid(self):
         self.pts = np.array(
@@ -87,39 +87,38 @@ class kohonen:
         """
         num_obs = data.shape[0]
         obs_id = np.arange(num_obs)
-        chose_i = None
-        node_id = None
+        chose_i = np.empty(1)
+        bmu_node = np.empty(1)
+        # node_id = None
         hci = None
         # learning rate
         if init_rate is None:
-            self.alpha = .05
-        else:
-            self.alpha = init_rate
+            init_rate = .05
+        self.alpha = init_rate
         # radius of neighborhood
         if init_radius is None:
-            self.sigma = np.quantile(self.dci, 2 / 3)
-        else:
-            self.sigma = init_radius
+            init_radius = np.quantile(self.dci, q = 2 / 3, axis = None)
+        self.sigma = init_radius
         # time constant (lambda)
         self.time_constant = epoch / np.log(self.sigma)
         # BMU pair
         self.find_bmu(data)
         bmu_dist = self.dci[1, :]
         for i in range(1, epoch + 1):
-            chose_i = np.random.choice(obs_id)
+            chose_i = np.random.choice(obs_id, size = 1)
             # BMU
-            bmu_node = self.bmu[chose_i - 1]
-            bmu_dist = self.dci[bmu_node, :]
+            bmu_node = self.bmu[chose_i.astype(int)]
+            bmu_dist = self.dci[bmu_node.astype(int), :]
             # decay
             self.sigma = kohonen.decay(init_radius, i, self.time_constant)
             self.alpha = kohonen.decay(init_rate, i, self.time_constant)
             # neighboring nodes
-            neighbor_neuron = np.where(bmu_dist <= self.sigma)
-            for k in range(1, neighbor_neuron.shape[0] + 1):
-                node_id = neighbor_neuron[k - 1]
+            neighbor_neuron = np.where(bmu_dist <= self.sigma)[0]
+            for k in range(neighbor_neuron.shape[0]):
+                node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
                 # update codebook
-                self.net[node_id, :, :] += self.alpha * hci * (data[chose_i - 1, :, :] - self.net[node_id, :, :])
+                self.net[node_id, :, :] += self.alpha * hci * (data[chose_i.astype(int), :, :] - self.net[node_id, :, :])
 
     def find_bmu(self, data):
         """
@@ -128,9 +127,9 @@ class kohonen:
         """
         dist_code = np.empty(self.net.shape[0]) # node length
         bmu_id = np.empty(data.shape[0]) # observation length
-        for i in range(1, data.shape[0] + 1):
-            dist_code = np.asarray([self.dist_mat(data, i - 1, j - 1) for j in range(1, self.net.shape[0] + 1)])
-            bmu_id[i - 1] = np.argmin(dist_code)
+        for i in range(data.shape[0]):
+            dist_code = np.asarray([self.dist_mat(data, i, j) for j in range(self.net.shape[0])])
+            bmu_id[i] = np.argmin(dist_code)
         self.bmu = bmu_id
 
     def dist_mat(self, data, index, node):
@@ -155,9 +154,9 @@ class kohonen:
         :return: distance matrix of SOM neuron
         """
         if self.topo == "hexagonal":
-            self.dci = distance.cdist(self.pts[:, 0], self.pts[:, 1], "euclidean")
+            self.dci = distance.cdist(self.pts, self.pts, "euclidean")
         else:
-            self.dci = distance.cdist(self.pts[:, 0], self.pts[:, 1], "chebyshev")
+            self.dci = distance.cdist(self.pts, self.pts, "chebyshev")
 
     @staticmethod
     def decay(init, time, time_constant):

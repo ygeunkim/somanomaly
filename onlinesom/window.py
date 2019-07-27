@@ -21,9 +21,9 @@ class SomData:
         """
         data = SomData.read_array(path, cols)
         win_num = (data.shape[0] - window_size) // jump_size + 1
-        self.window_data = np.empty((win_num, window_size, jump_size))
+        self.window_data = np.empty((win_num, window_size, data.shape[1]))
         for i in range(win_num):
-            self.window_data[i, :, :] = data[i * jump_size + i * jump_size + window_size - 1, :]
+            self.window_data[i, :, :] = data[range(i * jump_size, i * jump_size + window_size), :]
 
     @staticmethod
     def read_array(path, cols):
@@ -32,5 +32,5 @@ class SomData:
         :param cols: column index to read
         :return: numpy converted from pandas
         """
-        df = pd.read_csv(path, index_col = cols)
-        return pd.Series.to_numpy(df)
+        df = pd.read_csv(path, usecols = cols)
+        return pd.DataFrame.to_numpy(df)
