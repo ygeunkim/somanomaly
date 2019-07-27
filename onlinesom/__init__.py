@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import distance
 
+
 class kohonen:
     """
     Matrix SOM
@@ -168,19 +169,16 @@ class kohonen:
         """
         return init * np.exp(-time / time_constant)
 
-    def neighborhood(self, distance, radius):
+    def neighborhood(self, node_distance, radius):
         """
-        :param distance: Distance between SOM neurons
+        :param node_distance: Distance between SOM neurons
         :param radius: Radius of BMU neighborhood
         :return: Neighborhood function hci
         """
         if self.neighbor_func == "gaussian":
-            return np.exp(-distance ** 2 / (2 * (radius ** 2)))
+            return np.exp(-node_distance ** 2 / (2 * (radius ** 2)))
         else:
-            if distance <= radius:
+            if node_distance <= radius:
                 return 1.0
             else:
                 return 0.0
-
-
-

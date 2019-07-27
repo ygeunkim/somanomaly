@@ -11,6 +11,7 @@ setuptools.setup(
     description="Anomaly detection using self organizing maps",
     long_description=long_description,
     url="https://github.com/ygeunkim/onlinesom",
+    license="LICENSE",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.7",
@@ -18,5 +19,5 @@ setuptools.setup(
         "Intended Audience :: Computer Science/Statistics"
     ],
     keywords="Self Organizing Maps",
-    install_requires=["numpy", "scipy"]
+    install_requires=["numpy", "scipy", "pandas"]
 )

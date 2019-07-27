@@ -1,2 +1,3 @@
 Numpy
 scipy
+pandas
