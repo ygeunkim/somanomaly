@@ -1,6 +1,6 @@
-# Online SOM Detector
+# SomAnomaly
 
-Anomaly detection using *Self-Organizing Maps*
+**Online SOM Detector** - Anomaly detection using Self-Organizing Maps
 
 ## Motivation
 
