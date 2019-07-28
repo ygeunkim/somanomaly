@@ -2,12 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/tests/test_anomaly.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/onlinesom/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/onlinesom/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/onlinesom/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/onlinesom/detector.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/onlinesom/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/onlinesom/window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_anomaly.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_anomaly.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_som.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_som.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -33,7 +30,7 @@
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -47,7 +44,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_anomaly">
+  <component name="RunManager" selected="Python.test_som">
     <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="onlinesom" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -82,7 +79,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/test_anomaly.py" />
-      <option name="PARAMETERS" value="" />
+      <option name="PARAMETERS" value="&quot;../data/station1_train.csv&quot; &quot;../data/station1_test.csv&quot;" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -103,7 +100,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/test_som.py" />
-      <option name="PARAMETERS" value="" />
+      <option name="PARAMETERS" value="&quot;../data/station1_train.csv&quot;" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -111,10 +108,15 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.__init__" />
+      <item itemvalue="Python.test_anomaly" />
+      <item itemvalue="Python.test_som" />
+    </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.test_anomaly" />
         <item itemvalue="Python.test_som" />
+        <item itemvalue="Python.test_anomaly" />
         <item itemvalue="Python.__init__" />
       </list>
     </recent_temporary>

@@ -1,9 +1,10 @@
+import sys
 import numpy as np
 from onlinesom import kohonen
 from onlinesom.window import SomData
 
 
-def train_example(path = "../data/station1_train.csv"):
+def train_example(path):
     """
     :param path: normal data set path
     """
@@ -16,4 +17,6 @@ def train_example(path = "../data/station1_train.csv"):
 
 
 np.set_printoptions(precision = 3)
-train_example()
+if __name__ == "__main__":
+    path = sys.argv[1]
+    train_example(path)

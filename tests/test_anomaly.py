@@ -1,8 +1,9 @@
+import sys
 import numpy as np
 from onlinesom.detector import SomDetect
 
 
-def detect_example(path_normal = "../data/station1_train.csv", path_on = "../data/station1_test.csv"):
+def detect_example(path_normal, path_on):
     """
     :param path_normal: normal data set
     :param path_on: online data set
@@ -28,4 +29,7 @@ def detect_example(path_normal = "../data/station1_train.csv", path_on = "../dat
 
 
 np.set_printoptions(precision = 3)
-detect_example()
+if __name__ == "__main__":
+    path1 = sys.argv[1]
+    path2 = sys.argv[2]
+    detect_example(path1, path2)
