@@ -20,7 +20,8 @@ class SomData:
         :param jump_size: shift size
         """
         data = SomData.read_array(path, cols)
-        win_num = (data.shape[0] - window_size) // jump_size + 1
+        self.n = data.shape[0]
+        win_num = (self.n - window_size) // jump_size + 1
         self.window_data = np.empty((win_num, window_size, data.shape[1]))
         for i in range(win_num):
             self.window_data[i, :, :] = data[range(i * jump_size, i * jump_size + window_size), :]

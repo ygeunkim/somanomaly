@@ -33,7 +33,7 @@ class kohonen:
         :param ydim: Number of y-grid
         :param topo: Topology of output space - rectangular or hexagonal
         :param neighbor: Neighborhood function - gaussian or bubble
-        :param dist: Distance function - frobenius, pca, or
+        :param dist: Distance function - frobenius, nuclear, or
         """
         self.net_dim = np.array([xdim, ydim])
         self.ncol = data.shape[2]
@@ -53,7 +53,7 @@ class kohonen:
             raise ValueError("Invalid neighbor. Expected one of: %s" % neighbor_types)
         self.neighbor_func = neighbor
         # Distance function
-        dist_type = ["frobenius", "pca"]
+        dist_type = ["frobenius", "nuclear"]
         if dist not in dist_type:
             raise ValueError("Invalid dist. Expected one of: %s" % dist_type)
         self.dist_func = dist
@@ -65,7 +65,7 @@ class kohonen:
         self.bmu = None
 
     def init_weight(self):
-        self.net = np.random.rand(self.net_dim[0] + self.net_dim[1], self.nrow, self.ncol)
+        self.net = np.random.rand(self.net_dim[0] * self.net_dim[1], self.nrow, self.ncol)
 
     def init_grid(self):
         self.pts = np.array(
@@ -104,21 +104,39 @@ class kohonen:
         # BMU pair
         self.find_bmu(data)
         bmu_dist = self.dci[1, :]
-        for i in range(1, epoch + 1):
+        for i in range(epoch):
             chose_i = np.random.choice(obs_id, size = 1)
             # BMU
             bmu_node = self.bmu[chose_i.astype(int)]
-            bmu_dist = self.dci[bmu_node.astype(int), :]
+            bmu_dist = self.dci[bmu_node.astype(int), :].flatten()
             # decay
-            self.sigma = kohonen.decay(init_radius, i, self.time_constant)
-            self.alpha = kohonen.decay(init_rate, i, self.time_constant)
+            self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
+            self.alpha = kohonen.decay(init_rate, i + 1, self.time_constant)
+            # message - remove later
+            print("=============================================================")
+            print("epoch: ", i + 1)
+            print("learning rate: %.3f" % self.alpha)
+            print("BMU radius: %.3f" % self.sigma)
+            print("------------------------------")
             # neighboring nodes
-            neighbor_neuron = np.where(bmu_dist <= self.sigma)[0]
+            neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
+            # message - remove later
+            print("distance between BMU and node: ", bmu_dist)
+            print("neighboring neuron: ", neighbor_neuron)
+            print("------------------------------")
             for k in range(neighbor_neuron.shape[0]):
                 node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
-                # update codebook
-                self.net[node_id, :, :] += self.alpha * hci * (data[chose_i.astype(int), :, :] - self.net[node_id, :, :])
+                # message - remove later
+                print("node: ", node_id)
+                print("neighborhood function value: %.3f" % hci)
+                # update codebook matrices of neighboring nodes
+                self.net[node_id, :, :] += \
+                    self.alpha * hci * \
+                    (data[chose_i.astype(int), :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
+                # message - remove later
+                print("codebook matrix: \n", self.net[node_id, :, :])
+                print("------------------------------")
 
     def find_bmu(self, data):
         """
@@ -142,12 +160,7 @@ class kohonen:
         if self.dist_func == "frobenius":
             return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "fro")
         else:
-            u_data, d_data, vt_data = np.linalg.svd(data[index - 1, :, :], full_matrices= False)
-            u_net, d_net, vt_net = np.linalg.svd(self.net[node, :, :], full_matrices = False)
-            pc_data = np.dot(u_data, d_data)
-            pc_net = np.dot(u_net, d_net)
-            lmt = np.dot(pc_data, pc_net.T)
-            return np.trace(np.dot(lmt, lmt.T))
+            return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "nuc")
 
     def dist_node(self):
         """
