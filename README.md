@@ -33,14 +33,22 @@ In terminal, you can run *Online SOM detector* using `onlinesom/detector.py`:
 
 ```
 cd onlinesom
-python detector.py -n <normal_file> -o <online_file> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
 ```
 
 ### File path
 
+#### Input file
+
 ```
 -n Normal dataset file
 -o Online dataset file
+-c Column index to read - start,end (Default = every column)
+```
+
+#### Output file
+
+```
 -m Anomaly detection output file
 ```
 

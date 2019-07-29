@@ -5,8 +5,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/onlinesom/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/onlinesom/detector.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/onlinesom/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/onlinesom/window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_anomaly_save.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_anomaly_save.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

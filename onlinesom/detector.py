@@ -138,7 +138,7 @@ def main(argv):
         sys.exit(1)
     for opt, arg in opts:
         if opt == "-h" or opt == "--help":
-            print("python detector.py -n <normal_file> -o <online_file> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>")
+            print("python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>")
             message = """-h or --help: help
             -n: Normal data set file
             -o: Online data set file
