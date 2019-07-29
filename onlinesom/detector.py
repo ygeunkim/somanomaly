@@ -50,10 +50,10 @@ class SomDetect:
         """
         self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius)
 
-    def detect_anomaly(self, label = None, threshold = None):
+    def detect_anomaly(self, label = None, threshold = "quantile"):
         """
         :param label: anomaly and normal label list
-        :param threshold: threshold for detection
+        :param threshold: threshold for detection - quantile, radius or mean
         :return: Anomaly detection
         """
         if label is None:
@@ -62,9 +62,17 @@ class SomDetect:
             raise ValueError("label should have 2 elements")
         self.label = label
         dist_anomaly = np.asarray([self.dist_uarray(i) for i in range(self.som_te.window_data.shape[0])])
-        if threshold is None:
+        thr_types = ["quantile", "radius", "mean"]
+        if threshold not in thr_types:
+            raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
+        if threshold == "quantile":
             dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
             threshold = np.quantile(dist_normal, 2 / 3)
+        elif threshold == "radius":
+            threshold = self.som_grid.sigma
+        else:
+            dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
+            threshold = np.mean(dist_normal)
         som_anomaly = dist_anomaly > threshold
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]

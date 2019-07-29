@@ -3,12 +3,18 @@ import numpy as np
 from onlinesom.detector import SomDetect
 
 
-def detect_example(path_normal, path_on):
+def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid = 20):
     """
     :param path_normal: normal data set
     :param path_on: online data set
+    :param win: window size
+    :param jump: shift size
+    :param xgrid: number of x-grid
+    :param ygrid: number of y-grid
     """
-    som_anomaly = SomDetect(path_normal, path_on, range(2, 7), 60, 50, 30, 30)
+    som_anomaly = SomDetect(path_normal, path_on, range(2, 7),
+                            window_size = win, jump_size = jump,
+                            xdim = xgrid, ydim = ygrid)
     print("------------------------------")
     print("normal data set: ", som_anomaly.som_tr.window_data.shape)
     print("online data set: ", som_anomaly.som_te.window_data.shape)
@@ -32,4 +38,8 @@ np.set_printoptions(precision = 3)
 if __name__ == "__main__":
     path1 = sys.argv[1]
     path2 = sys.argv[2]
-    detect_example(path1, path2)
+    win = int(sys.argv[3])
+    jump = int(sys.argv[4])
+    xgrid = int(sys.argv[5])
+    ygrid = int(sys.argv[6])
+    detect_example(path1, path2, win, jump, xgrid, ygrid)
