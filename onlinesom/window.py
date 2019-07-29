@@ -27,11 +27,14 @@ class SomData:
             self.window_data[i, :, :] = data[range(i * jump_size, i * jump_size + window_size), :]
 
     @staticmethod
-    def read_array(path, cols):
+    def read_array(path, cols = None):
         """
         :param path: data path
         :param cols: column index to read
         :return: numpy converted from pandas
         """
-        df = pd.read_csv(path, usecols = cols)
+        if cols is None:
+            df = pd.read_csv(path)
+        else:
+            df = pd.read_csv(path, usecols = cols)
         return pd.DataFrame.to_numpy(df)

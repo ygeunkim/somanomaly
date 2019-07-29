@@ -1,4 +1,7 @@
 import numpy as np
+import pandas as pd
+import sys
+import getopt
 from onlinesom import kohonen
 from onlinesom.window import SomData
 
@@ -19,8 +22,8 @@ class SomDetect:
     """
 
     def __init__(
-            self, path_normal, path_online, cols, window_size, jump_size,
-            xdim, ydim, topo = "rectangular", neighbor = "gaussian", dist = "frobenius"
+            self, path_normal, path_online, cols = None, window_size = 60, jump_size = 60,
+            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian", dist = "frobenius"
     ):
         """
         :param path_normal: file path of normal data set
@@ -103,3 +106,107 @@ class SomDetect:
                     if self.anomaly[j] != self.label[0]:
                         self.anomaly[j] = self.label[0]
 
+
+def main(argv):
+    normal_file = ""
+    online_file = ""
+    output_file = ""
+    cols = None
+    window_size = 60
+    jump_size = 60
+    xdim = 20
+    ydim = 20
+    topo = "rectangular"
+    neighbor = "gaussian"
+    dist = "frobenius"
+    label = [1, 0]
+    threshold = "mean"
+    epoch = 100
+    init_rate = None
+    init_radius = None
+    try:
+        opts, args = getopt.getopt(argv, "hn:o:m:c:w:j:x:y:t:f:d:l:p:e:a:r:",
+                                   ["help", "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
+                                    "Window size=(default:60)", "Jump size=(default:60)",
+                                    "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
+                                    "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
+                                    "Label=(default:[1,0])", "Threshold=(default:mean)",
+                                    "Epoch number=(default:100)",
+                                    "Initial learning rate=(default:0.05)", "Initial radius=(default:function)"])
+    except getopt.GetoptError:
+        print("Getopterror")
+        sys.exit(1)
+    for opt, arg in opts:
+        if opt == "-h" or opt == "--help":
+            print("python detector.py -n <normal_file> -o <online_file> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>")
+            message = """-h or --help: help
+            -n: Normal data set file
+            -o: Online data set file
+            -m: Output file
+            -c: first and the last column indices to read, e.g. 1, 5
+            Default = None
+            -w: window size
+            Default = 60
+            -j: shift size
+            Default = 60
+            -x: number of x-grid
+            Default = 20
+            -y: number of y-grid
+            Default = 20
+            -t: topology of SOM output space - rectangular or hexagonal
+            Default = rectangular
+            -f: neighborhood function - gaussian or bubble
+            Default = gaussian
+            -d: distance function - frobenius or nuclear
+            Default = frobenius
+            -l: anomaly and normal label
+            Default = 1,0
+            -p: threshold method - .75 quantile, radius, or mean
+            Default = mean
+            -e: epoch number
+            Default = 100
+            """
+            print(message)
+            sys.exit()
+        elif opt in ("-n"):
+            normal_file = arg
+        elif opt in ("-o"):
+            online_file = arg
+        elif opt in ("-m"):
+            output_file = arg
+        elif opt in ("-c"):
+            cols = str(arg).strip().split(',')
+            cols = range(int(cols[0]), int(cols[1]))
+        elif opt in ("-w"):
+            window_size = int(arg)
+        elif opt in ("-j"):
+            jump_size = int(arg)
+        elif opt in ("-x"):
+            xdim = int(arg)
+        elif opt in ("-y"):
+            ydim = int(arg)
+        elif opt in ("-t"):
+            topo = arg
+        elif opt in ("-f"):
+            neighbor = arg
+        elif opt in ("-d"):
+            dist = arg
+        elif opt in ("-l"):
+            label = str(arg).strip().split(',')
+            label = range(int(label[0]), int(label[1]))
+        elif opt in ("-p"):
+            threshold = arg
+        elif opt in ("-e"):
+            epoch = int(arg)
+    som_anomaly = SomDetect(normal_file, online_file, cols,
+                            window_size, jump_size,
+                            xdim, ydim, topo, neighbor, dist)
+    som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
+    som_anomaly.detect_anomaly(label = label, threshold = threshold)
+    som_anomaly.label_anomaly()
+    anomaly_df = pd.DataFrame(som_anomaly.anomaly)
+    anomaly_df.to_csv(output_file, index = False, header = False)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

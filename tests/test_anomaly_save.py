@@ -19,7 +19,7 @@ def detect_save(path_normal, path_on, col_id = range(2, 51), win = 60, jump = 50
                             window_size = win, jump_size = jump,
                             xdim = xgrid, ydim = ygrid)
     som_anomaly.learn_normal(100)
-    som_anomaly.detect_anomaly(label = [-1, 1], threshold = "mean")
+    som_anomaly.detect_anomaly(label = [1, 0], threshold = "mean")
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame(som_anomaly.anomaly)
     anomaly_df.to_csv("../data/processed/som_label_mean.csv", index = False)
