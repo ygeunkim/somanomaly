@@ -33,6 +33,8 @@ The following is a description of each argument.
 
 #### Input file
 
+For now, this function reads only `*.csv` files.
+
 ```
 -n  Normal dataset file
 -o  Online dataset file
@@ -40,7 +42,10 @@ The following is a description of each argument.
 ```
 
 Warning: *this function requires exactly same form of both files.
-If you use `-c` option, it will be applied to both normal data set file and online data-set file.* 
+If you use `-c` option, it will be applied to both normal data set file and online data-set file.*
+
+In case of `-c`, follow the python `range(start, end)` function.
+Then the columns from `start + 1` to `end` in the file will be read.
 
 #### Output file
 
@@ -48,9 +53,14 @@ If you use `-c` option, it will be applied to both normal data set file and onli
 -m  Anomaly detection output file
 ```
 
-### Training SOM
+This file does not have any column header or row index.
 
-Training and detecting options has default value, respectively. So all these are optional arguments.
+### SOM
+
+Options for training and detection have default values, respectively.
+So all these are optional arguments.
+
+#### Training SOM
 
 ```
 -w  Window size (Default = 60)
@@ -60,15 +70,20 @@ Training and detecting options has default value, respectively. So all these are
 -t  Topology of SOM output space - rectangular (default) or hexagonal
 -f  Neighborhood function - gaussian (default) or bubble
 -d  Distance function - frobenius (default) or nuclear
+-s  Random seed (Default = system time)
 -e  Epoch number (Default = 100)
+-a  Initial learning rate (Default = 0.05)
+-r  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
 ```
 
-### Detecting
+#### Detecting anomaly
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
 -p  Threshold method - mean (default), 0.75 quantile, or radius
 ```
+
+***
 
 ## Motivation
 

@@ -26,7 +26,7 @@ class kohonen:
         Learning rate: ⍺(t) = ⍺_0 * exp(-t / ƛ)
     """
 
-    def __init__(self, data, xdim, ydim, topo = "rectangular", neighbor = "gaussian", dist = "frobenius"):
+    def __init__(self, data, xdim, ydim, topo = "rectangular", neighbor = "gaussian", dist = "frobenius", seed = None):
         """
         :param data: 3d array. processed data set for Online SOM Detector
         :param xdim: Number of x-grid
@@ -34,7 +34,9 @@ class kohonen:
         :param topo: Topology of output space - rectangular or hexagonal
         :param neighbor: Neighborhood function - gaussian or bubble
         :param dist: Distance function - frobenius, nuclear, or
+        :param seed: Random seed
         """
+        np.random.seed(seed = seed)
         self.net_dim = np.array([xdim, ydim])
         self.ncol = data.shape[2]
         self.nrow = data.shape[1]
@@ -159,7 +161,7 @@ class kohonen:
         """
         if self.dist_func == "frobenius":
             return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "fro")
-        else:
+        elif self.dist_func == "nuclear":
             return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "nuc")
 
     def dist_node(self):
@@ -168,7 +170,7 @@ class kohonen:
         """
         if self.topo == "hexagonal":
             self.dci = distance.cdist(self.pts, self.pts, "euclidean")
-        else:
+        elif self.topo == "rectangular":
             self.dci = distance.cdist(self.pts, self.pts, "chebyshev")
 
     @staticmethod
@@ -189,7 +191,7 @@ class kohonen:
         """
         if self.neighbor_func == "gaussian":
             return np.exp(-node_distance ** 2 / (2 * (radius ** 2)))
-        else:
+        elif self.neighbor_func == "bubble":
             if node_distance <= radius:
                 return 1.0
             else:

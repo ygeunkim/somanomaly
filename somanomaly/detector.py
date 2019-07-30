@@ -23,7 +23,7 @@ class SomDetect:
 
     def __init__(
             self, path_normal, path_online, cols = None, window_size = 60, jump_size = 60,
-            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian", dist = "frobenius"
+            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian", dist = "frobenius", seed = None
     ):
         """
         :param path_normal: file path of normal data set
@@ -36,10 +36,11 @@ class SomDetect:
         :param topo: Topology of output space - rectangular or hexagonal
         :param neighbor: Neighborhood function - gaussian or bubble
         :param dist: Distance function - frobenius, nuclear, or
+        :param seed: Random seed
         """
         self.som_tr = SomData(path_normal, cols, window_size, jump_size)
         self.som_te = SomData(path_online, cols, window_size, jump_size)
-        self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist)
+        self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, seed)
         # anomaly
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
@@ -119,18 +120,20 @@ def main(argv):
     topo = "rectangular"
     neighbor = "gaussian"
     dist = "frobenius"
+    seed = None
     label = [1, 0]
     threshold = "mean"
     epoch = 100
     init_rate = None
     init_radius = None
     try:
-        opts, args = getopt.getopt(argv, "hn:o:m:c:w:j:x:y:t:f:d:l:p:e:a:r:",
-                                   ["help", "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
+        opts, args = getopt.getopt(argv, "hn:o:m:c:w:j:x:y:t:f:d:s:l:p:e:a:r:",
+                                   ["help",
+                                    "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "Window size=(default:60)", "Jump size=(default:60)",
                                     "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
-                                    "Label=(default:[1,0])", "Threshold=(default:mean)",
+                                    "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:mean)",
                                     "Epoch number=(default:100)",
                                     "Initial learning rate=(default:0.05)", "Initial radius=(default:function)"])
     except getopt.GetoptError:
@@ -159,12 +162,18 @@ def main(argv):
             Default = gaussian
             -d: distance function - frobenius or nuclear
             Default = frobenius
+            -s: random seed
+            Default = current system time
             -l: anomaly and normal label
             Default = 1,0
-            -p: threshold method - .75 quantile, radius, or mean
+            -p: threshold method - quantile, radius, or mean
             Default = mean
             -e: epoch number
             Default = 100
+            -a: initial learning ratio
+            Default = 0.05
+            -r: initial radius of BMU neighborhood
+            Default = 2/3 quantile of every distance between nodes
             """
             print(message)
             sys.exit()
@@ -191,6 +200,8 @@ def main(argv):
             neighbor = arg
         elif opt in ("-d"):
             dist = arg
+        elif opt in ("-s"):
+            seed = int(arg)
         elif opt in ("-l"):
             label = str(arg).strip().split(',')
             label = range(int(label[0]), int(label[1]))
@@ -198,9 +209,13 @@ def main(argv):
             threshold = arg
         elif opt in ("-e"):
             epoch = int(arg)
+        elif opt in ("-a"):
+            init_rate = float(arg)
+        elif opt in ("-r"):
+            init_radius = float(arg)
     som_anomaly = SomDetect(normal_file, online_file, cols,
                             window_size, jump_size,
-                            xdim, ydim, topo, neighbor, dist)
+                            xdim, ydim, topo, neighbor, dist, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
     som_anomaly.detect_anomaly(label = label, threshold = threshold)
     som_anomaly.label_anomaly()
@@ -209,4 +224,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    np.set_printoptions(precision=3)
     main(sys.argv[1:])
