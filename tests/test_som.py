@@ -14,6 +14,7 @@ def train_example(path):
     print("------------------------------")
     som_grid = kohonen(win_data.window_data, 10, 10)
     som_grid.som(data = win_data.window_data)
+    som_grid.plot_error()
 
 
 np.set_printoptions(precision = 3)

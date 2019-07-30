@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import plotly.express as px
 from scipy.spatial import distance
 
 
@@ -90,9 +92,10 @@ class kohonen:
         num_obs = data.shape[0]
         obs_id = np.arange(num_obs)
         chose_i = np.empty(1)
-        bmu_node = np.empty(1)
+        # bmu_node = np.empty(1)
         # node_id = None
         hci = None
+        seq_epoch = np.arange(epoch) + 1
         # learning rate
         if init_rate is None:
             init_rate = .05
@@ -103,54 +106,53 @@ class kohonen:
         self.sigma = init_radius
         # time constant (lambda)
         self.time_constant = epoch / np.log(self.sigma)
-        # BMU pair
-        self.find_bmu(data)
+        # distance between nodes
         bmu_dist = self.dci[1, :]
+        rcst_err = np.empty(epoch)
         for i in range(epoch):
-            chose_i = np.random.choice(obs_id, size = 1)
-            # BMU
-            bmu_node = self.bmu[chose_i.astype(int)]
-            bmu_dist = self.dci[bmu_node.astype(int), :].flatten()
+            chose_i = int(np.random.choice(obs_id, size = 1))
+            # BMU - self.bmu
+            rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
+            bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
             self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
             self.alpha = kohonen.decay(init_rate, i + 1, self.time_constant)
             # message - remove later
-            print("=============================================================")
-            print("epoch: ", i + 1)
-            print("learning rate: %.3f" % self.alpha)
-            print("BMU radius: %.3f" % self.sigma)
-            print("------------------------------")
+            # print("=============================================================")
+            # print("epoch: ", i + 1)
+            # print("learning rate: %.3f" % self.alpha)
+            # print("BMU radius: %.3f" % self.sigma)
+            # print("------------------------------")
             # neighboring nodes
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
             # message - remove later
-            print("distance between BMU and node: ", bmu_dist)
-            print("neighboring neuron: ", neighbor_neuron)
-            print("------------------------------")
+            # print("distance between BMU and node: ", bmu_dist)
+            # print("neighboring neuron: ", neighbor_neuron)
+            # print("------------------------------")
             for k in range(neighbor_neuron.shape[0]):
                 node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
                 # message - remove later
-                print("node: ", node_id)
-                print("neighborhood function value: %.3f" % hci)
+                # print("node: ", node_id)
+                # print("neighborhood function value: %.3f" % hci)
                 # update codebook matrices of neighboring nodes
                 self.net[node_id, :, :] += \
                     self.alpha * hci * \
-                    (data[chose_i.astype(int), :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
+                    (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
                 # message - remove later
-                print("codebook matrix: \n", self.net[node_id, :, :])
-                print("------------------------------")
+                # print("codebook matrix: \n", self.net[node_id, :, :])
+                # print("------------------------------")
+        self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
 
-    def find_bmu(self, data):
+    def find_bmu(self, data, index):
         """
         :param data: Processed data set for SOM.
-        :return: Best Matching Unit index for each observation index (in order)
+        :param index: Randomly chosen observation id for input matrix among 3d tensor set.
+        :return: Reconstruction error
         """
-        dist_code = np.empty(self.net.shape[0]) # node length
-        bmu_id = np.empty(data.shape[0]) # observation length
-        for i in range(data.shape[0]):
-            dist_code = np.asarray([self.dist_mat(data, i, j) for j in range(self.net.shape[0])])
-            bmu_id[i] = np.argmin(dist_code)
-        self.bmu = bmu_id
+        dist_code = np.asarray([self.dist_mat(data, index, j) for j in range(self.net.shape[0])])
+        self.bmu = np.argmin(dist_code)
+        return np.square(dist_code)
 
     def dist_mat(self, data, index, node):
         """
@@ -160,9 +162,9 @@ class kohonen:
         :return: distance between input matrix observation and weight matrix of the node
         """
         if self.dist_func == "frobenius":
-            return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "fro")
+            return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "fro")
         elif self.dist_func == "nuclear":
-            return np.linalg.norm(data[index - 1, :, :] - self.net[node, :, :], "nuc")
+            return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "nuc")
 
     def dist_node(self):
         """
@@ -196,3 +198,7 @@ class kohonen:
                 return 1.0
             else:
                 return 0.0
+
+    def plot_error(self):
+        fig = px.line(self.reconstruction_error, x = "Epoch", y = "Reconstruction Error")
+        fig.show()
