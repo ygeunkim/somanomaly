@@ -58,6 +58,8 @@ python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <win
 
 ## Motivation
 
+### Pre-processing
+
 <p align="center">
     <img width="70%" height="43.26%" src="docs/som_data.png" >
 </p>
@@ -75,7 +77,12 @@ The algorithm requires computing *distance between matrices* - input matrix and 
     <img width="70%" height="43.26%" src="docs/distance.png">
 </p>
 
-## Anomaly detection
+### Anomaly detection
 
-Build 3d array for online data-set. Compute each distance between codebook matrix and window matrix.
-If it is larger than threshold, the window is detected as anomaly.
+1. Build 3d array for online data-set.
+2. Compute each distance between weight (codebook) matrix.
+3. If the minimum is larger than threshold, the window is detected as anomaly.
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/som_detect.png">
+</p>
