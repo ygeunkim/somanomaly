@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from onlinesom.detector import SomDetect
+from somanomaly.detector import SomDetect
 
 
 def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid = 20):

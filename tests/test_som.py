@@ -1,7 +1,7 @@
 import sys
 import numpy as np
-from onlinesom import kohonen
-from onlinesom.window import SomData
+from somanomaly import kohonen
+from somanomaly.window import SomData
 
 
 def train_example(path):

@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import pandas as pd
-from onlinesom.detector import SomDetect
+from somanomaly.detector import SomDetect
 
 
 def detect_save(path_normal, path_on, col_id = range(2, 51), win = 60, jump = 50, xgrid = 20, ygrid = 20):

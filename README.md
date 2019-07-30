@@ -6,7 +6,7 @@
 
 ```
 git clone https://github.com/ygeunkim/somanomaly.git
-cd onlinesom
+cd somanomaly
 python setup.py build
 python setup.py install
 ```
@@ -16,7 +16,7 @@ python setup.py install
 In terminal, you can run *Online SOM detector* using `onlinesom/detector.py`:
 
 ```
-cd onlinesom
+cd somanomaly
 python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
 ```
 

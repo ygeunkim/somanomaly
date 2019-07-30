@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import sys
 import getopt
-from onlinesom import kohonen
-from onlinesom.window import SomData
+from somanomaly import kohonen
+from somanomaly.window import SomData
 
 
 class SomDetect:
