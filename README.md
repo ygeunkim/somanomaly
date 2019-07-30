@@ -2,26 +2,10 @@
 
 **Online SOM Detector** - Anomaly detection using Self-Organizing Maps
 
-## Motivation
-
-![Process time series](docs/som_data.png)
-
-Given multivariate time series, we are trying to outlying pattern. This represents anomaly.
-
-1. Slide window
-2. Bind the windows
-
-Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set. Different with ordinary SOM structure, we use input **matrices**, not vectors.
-
-## Anomaly detection
-
-Build 3d array for online data-set. Compute each distance between codebook matrix and window matrix.
-If it is larger than threshold, the window is detected as anomaly.
-
 ## Building
 
 ```
-git clone https://github.com/ygeunkim/onlinesom.git
+git clone https://github.com/ygeunkim/somanomaly.git
 cd onlinesom
 python setup.py build
 python setup.py install
@@ -71,3 +55,27 @@ python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <win
 -l Anomaly and normal labels, e.g. 1,0 (default)
 -p Threshold method - mean (default), 0.75 quantile, or radius
 ```
+
+## Motivation
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/som_data.png" >
+</p>
+
+Given multivariate time series, we are trying to find outlying pattern. This represents anomaly.
+
+1. Slide window
+2. Bind the windows
+
+Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set. Different with ordinary SOM structure, we use input **matrices**, not vectors.
+
+The algorithm requires computing *distance between matrices* - input matrix and weight (codebook) matrix.
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/distance.png">
+</p>
+
+## Anomaly detection
+
+Build 3d array for online data-set. Compute each distance between codebook matrix and window matrix.
+If it is larger than threshold, the window is detected as anomaly.

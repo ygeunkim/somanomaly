@@ -10,7 +10,7 @@ setuptools.setup(
     author_email="dudrms33@g.skku.edu",
     description="Anomaly detection using self-organizing maps",
     long_description=long_description,
-    url="https://github.com/ygeunkim/onlinesom",
+    url="https://github.com/ygeunkim/somanomaly",
     license="LICENSE",
     packages=setuptools.find_packages(),
     classifiers=[
