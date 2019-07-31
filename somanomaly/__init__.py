@@ -118,30 +118,30 @@ class kohonen:
             self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
             self.alpha = kohonen.decay(init_rate, i + 1, self.time_constant)
             # message - remove later
-            # print("=============================================================")
-            # print("epoch: ", i + 1)
-            # print("learning rate: %.3f" % self.alpha)
-            # print("BMU radius: %.3f" % self.sigma)
-            # print("------------------------------")
+            print("=============================================================")
+            print("epoch: ", i + 1)
+            print("learning rate: %.3f" % self.alpha)
+            print("BMU radius: %.3f" % self.sigma)
+            print("------------------------------")
             # neighboring nodes
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
             # message - remove later
-            # print("distance between BMU and node: ", bmu_dist)
-            # print("neighboring neuron: ", neighbor_neuron)
-            # print("------------------------------")
+            print("distance between BMU and node: ", bmu_dist)
+            print("neighboring neuron: ", neighbor_neuron)
+            print("------------------------------")
             for k in range(neighbor_neuron.shape[0]):
                 node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
                 # message - remove later
-                # print("node: ", node_id)
-                # print("neighborhood function value: %.3f" % hci)
+                print("node: ", node_id)
+                print("neighborhood function value: %.3f" % hci)
                 # update codebook matrices of neighboring nodes
                 self.net[node_id, :, :] += \
                     self.alpha * hci * \
                     (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
                 # message - remove later
-                # print("codebook matrix: \n", self.net[node_id, :, :])
-                # print("------------------------------")
+                print("codebook matrix: \n", self.net[node_id, :, :])
+                print("------------------------------")
         self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
 
     def find_bmu(self, data, index):

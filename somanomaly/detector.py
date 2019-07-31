@@ -113,6 +113,7 @@ def main(argv):
     online_file = ""
     output_file = ""
     cols = None
+    # training arguments
     window_size = 60
     jump_size = 60
     xdim = 20
@@ -121,13 +122,16 @@ def main(argv):
     neighbor = "gaussian"
     dist = "frobenius"
     seed = None
-    label = [1, 0]
-    threshold = "mean"
     epoch = 100
     init_rate = None
     init_radius = None
+    # detection arguments
+    label = [1, 0]
+    threshold = "mean"
+    # plot options
+    print_error = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:m:c:w:j:x:y:t:f:d:s:l:p:e:a:r:",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:s:l:m:e:a:r:1",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "Window size=(default:60)", "Jump size=(default:60)",
@@ -135,45 +139,48 @@ def main(argv):
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:mean)",
                                     "Epoch number=(default:100)",
-                                    "Initial learning rate=(default:0.05)", "Initial radius=(default:function)"])
-    except getopt.GetoptError:
-        print("Getopterror")
-        sys.exit(1)
+                                    "Initial learning rate=(default:0.05)", "Initial radius=(default:function)",
+                                    "Plot reconstruction error=(default:False)"])
+    except getopt.GetoptError as err:
+        print(err)
+        print("python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius> -1")
+        sys.exit(2)
     for opt, arg in opts:
         if opt == "-h" or opt == "--help":
-            print("python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>")
             message = """-h or --help: help
             -n: Normal data set file
             -o: Online data set file
-            -m: Output file
             -c: first and the last column indices to read, e.g. 1, 5
-            Default = None
+                Default = None
+            -p: Output file
             -w: window size
-            Default = 60
+                Default = 60
             -j: shift size
-            Default = 60
+                Default = 60
             -x: number of x-grid
-            Default = 20
+                Default = 20
             -y: number of y-grid
-            Default = 20
+                Default = 20
             -t: topology of SOM output space - rectangular or hexagonal
-            Default = rectangular
+                Default = rectangular
             -f: neighborhood function - gaussian or bubble
-            Default = gaussian
+                Default = gaussian
             -d: distance function - frobenius or nuclear
-            Default = frobenius
+                Default = frobenius
             -s: random seed
-            Default = current system time
-            -l: anomaly and normal label
-            Default = 1,0
-            -p: threshold method - quantile, radius, or mean
-            Default = mean
+                Default = current system time
             -e: epoch number
-            Default = 100
+                Default = 100
             -a: initial learning ratio
-            Default = 0.05
+                Default = 0.05
             -r: initial radius of BMU neighborhood
-            Default = 2/3 quantile of every distance between nodes
+                Default = 2/3 quantile of every distance between nodes
+            -l: anomaly and normal label
+                Default = 1,0
+            -m: threshold method - quantile, radius, or mean
+                Default = mean
+            -1: plot reconstruction error path
+                Default = do not plot
             """
             print(message)
             sys.exit()
@@ -181,7 +188,7 @@ def main(argv):
             normal_file = arg
         elif opt in ("-o"):
             online_file = arg
-        elif opt in ("-m"):
+        elif opt in ("-p"):
             output_file = arg
         elif opt in ("-c"):
             cols = str(arg).strip().split(',')
@@ -205,7 +212,7 @@ def main(argv):
         elif opt in ("-l"):
             label = str(arg).strip().split(',')
             label = range(int(label[0]), int(label[1]))
-        elif opt in ("-p"):
+        elif opt in ("-m"):
             threshold = arg
         elif opt in ("-e"):
             epoch = int(arg)
@@ -213,6 +220,8 @@ def main(argv):
             init_rate = float(arg)
         elif opt in ("-r"):
             init_radius = float(arg)
+        elif opt in ("-1"):
+            print_error = True
     som_anomaly = SomDetect(normal_file, online_file, cols,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, seed)
@@ -221,6 +230,8 @@ def main(argv):
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame(som_anomaly.anomaly)
     anomaly_df.to_csv(output_file, index = False, header = False)
+    if print_error:
+        som_anomaly.som_grid.plot_error()
 
 
 if __name__ == '__main__':
