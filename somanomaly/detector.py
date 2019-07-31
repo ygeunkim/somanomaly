@@ -143,7 +143,14 @@ def main(argv):
                                     "Plot reconstruction error=(default:False)"])
     except getopt.GetoptError as err:
         print(err)
-        print("python detector.py -n <normal_file> -o <online_file> -c <column_range> {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> {-t} <topology> {-f} <neighborhood> {-d} <distance> {-l} <label> {-p} <threshold> {-e} <epoch> {-a} <init_rate> {-r} <init_radius> -1")
+        usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
+                                                    {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
+                                                    {-t} <topology> {-f} <neighborhood> {-d} <distance> {-s} <seed>  
+                                                    {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+                                                    {-l} <label> {-m} <threshold>
+                                                    {-1}
+        """
+        print(usage_message)
         sys.exit(2)
     for opt, arg in opts:
         if opt == "-h" or opt == "--help":
