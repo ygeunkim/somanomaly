@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 from scipy.spatial import distance
 
 
@@ -72,10 +73,17 @@ class kohonen:
         self.net = np.random.rand(self.net_dim[0] * self.net_dim[1], self.nrow, self.ncol)
 
     def init_grid(self):
+        """
+        order of
+        [1,1]
+        [2,1]
+        [1,2]
+        [2,2]
+        """
         self.pts = np.array(
             np.meshgrid(
-                range(self.net_dim[0]),
-                range(self.net_dim[1])
+                np.arange(self.net_dim[0]) + 1,
+                np.arange(self.net_dim[1]) + 1
             )
         ).reshape(2, np.prod(self.net_dim)).T
         if self.topo == "hexagonal":
@@ -143,6 +151,9 @@ class kohonen:
                 print("codebook matrix: \n", self.net[node_id, :, :])
                 print("------------------------------")
         self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
+        self.project = np.asarray(
+            [np.argmin([self.dist_mat(data, i, j) for j in range(self.net.shape[0])]) for i in range(data.shape[0])]
+        )
 
     def find_bmu(self, data, index):
         """
@@ -200,5 +211,23 @@ class kohonen:
                 return 0.0
 
     def plot_error(self):
+        """
+        :return: line plot of reconstruction error versus epoch
+        """
         fig = px.line(self.reconstruction_error, x = "Epoch", y = "Reconstruction Error")
+        fig.show()
+
+    def plot_heatmap(self, data):
+        """
+        :return: Heatmap for SOM
+        """
+        neuron_grid = np.empty((self.net_dim[0], self.net_dim[1]))
+        node_id = 0
+        for j in range(self.net_dim[0]):
+            for i in range(self.net_dim[1]):
+                neuron_grid[i, j] = (self.project == node_id).sum()
+                node_id += 1
+        fig = go.Figure(
+            data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+        )
         fig.show()

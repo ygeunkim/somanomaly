@@ -12,7 +12,7 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     :param xgrid: number of x-grid
     :param ygrid: number of y-grid
     """
-    som_anomaly = SomDetect(path_normal, path_on, range(2, 7),
+    som_anomaly = SomDetect(path_normal, path_on, range(2, 51),
                             window_size = win, jump_size = jump,
                             xdim = xgrid, ydim = ygrid)
     print("------------------------------")
@@ -20,7 +20,7 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     print("online data set: ", som_anomaly.som_te.window_data.shape)
     print("------------------------------")
     som_anomaly.learn_normal(100)
-    som_anomaly.detect_anomaly(label = [-1, 1])
+    som_anomaly.detect_anomaly(label = [1, 0], threshold = "mean")
     count = np.unique(som_anomaly.window_anomaly, return_counts = True)
     print("=============================================================")
     print("window anomaly result: ", som_anomaly.window_anomaly)
@@ -32,14 +32,11 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     print("anomaly result: ", som_anomaly.anomaly)
     print("counts: ", ent_count)
     print("------------------------------")
+    som_anomaly.plot_heatmap()
 
 
 np.set_printoptions(precision = 3)
 if __name__ == "__main__":
     path1 = sys.argv[1]
     path2 = sys.argv[2]
-    win = int(sys.argv[3])
-    jump = int(sys.argv[4])
-    xgrid = int(sys.argv[5])
-    ygrid = int(sys.argv[6])
-    detect_example(path1, path2, win, jump, xgrid, ygrid)
+    detect_example(path1, path2)

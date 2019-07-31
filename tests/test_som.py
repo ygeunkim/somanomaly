@@ -15,6 +15,7 @@ def train_example(path):
     som_grid = kohonen(win_data.window_data, 10, 10)
     som_grid.som(data = win_data.window_data)
     som_grid.plot_error()
+    som_grid.plot_heatmap(win_data.window_data)
 
 
 np.set_printoptions(precision = 3)

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sys
 import getopt
+import plotly.graph_objs as go
 from somanomaly import kohonen
 from somanomaly.window import SomData
 
@@ -45,6 +46,8 @@ class SomDetect:
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
         self.anomaly = np.empty(self.som_te.n)
+        # plot
+        self.project = np.empty(self.som_te.window_data.shape[0])
 
     def learn_normal(self, epoch = 100, init_rate = None, init_radius = None):
         """
@@ -65,7 +68,11 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        dist_anomaly = np.asarray([self.dist_uarray(i) for i in range(self.som_te.window_data.shape[0])])
+        som_dist_calc = np.asarray([self.dist_uarray(i) for i in range(self.som_te.window_data.shape[0])])
+        dist_anomaly = som_dist_calc[:, 0]
+        self.project = som_dist_calc[:, 1]
+        # message - remove later
+        print("Projection to normal SOM neuron: \n", self.project)
         thr_types = ["quantile", "radius", "mean"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
@@ -74,7 +81,7 @@ class SomDetect:
             threshold = np.quantile(dist_normal, 2 / 3)
         elif threshold == "radius":
             threshold = self.som_grid.sigma
-        else:
+        elif threshold == "mean":
             dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
             threshold = np.mean(dist_normal)
         som_anomaly = dist_anomaly > threshold
@@ -86,8 +93,9 @@ class SomDetect:
         :param index: Row index for online data set
         :return: minimum distance between online data set and weight matrix
         """
+        # normal_map = np.unique(self.som_grid.project)
         dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in range(self.som_grid.net.shape[0])])
-        return np.min(dist_wt)
+        return np.min(dist_wt), np.argmin(dist_wt)
 
     def dist_normal(self, index):
         """
@@ -106,6 +114,23 @@ class SomDetect:
                 for j in range(i * jump_size, i * jump_size + win_size):
                     if self.anomaly[j] != self.label[0]:
                         self.anomaly[j] = self.label[0]
+
+    def plot_heatmap(self):
+        """
+        :return: heatmap of projection onto normal SOM
+        """
+        xdim = self.som_grid.net_dim[0]
+        ydim = self.som_grid.net_dim[1]
+        neuron_grid = np.empty((xdim, ydim))
+        node_id = 0
+        for j in range(xdim):
+            for i in range(ydim):
+                neuron_grid[i, j] = (self.project == node_id).sum()
+                node_id += 1
+        fig = go.Figure(
+            data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+        )
+        fig.show()
 
 
 def main(argv):
@@ -130,8 +155,10 @@ def main(argv):
     threshold = "mean"
     # plot options
     print_error = False
+    print_heat = False
+    print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:s:l:m:e:a:r:1",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:s:l:m:e:a:r:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "Window size=(default:60)", "Jump size=(default:60)",
@@ -140,7 +167,9 @@ def main(argv):
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:mean)",
                                     "Epoch number=(default:100)",
                                     "Initial learning rate=(default:0.05)", "Initial radius=(default:function)",
-                                    "Plot reconstruction error=(default:False)"])
+                                    "Plot reconstruction error",
+                                    "Plot heatmap for SOM",
+                                    "Plot heatmap of projection onto normal SOM"])
     except getopt.GetoptError as err:
         print(err)
         usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
@@ -188,6 +217,10 @@ def main(argv):
                 Default = mean
             -1: plot reconstruction error path
                 Default = do not plot
+            -2: plot heatmap of SOM
+                Default = do not plot
+            -3: plot heatmap of projection onto normal SOM
+                Default = do not plot
             """
             print(message)
             sys.exit()
@@ -229,6 +262,10 @@ def main(argv):
             init_radius = float(arg)
         elif opt in ("-1"):
             print_error = True
+        elif opt in ("-2"):
+            print_heat = True
+        elif opt in ("-3"):
+            print_projection = True
     som_anomaly = SomDetect(normal_file, online_file, cols,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, seed)
@@ -237,8 +274,13 @@ def main(argv):
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame(som_anomaly.anomaly)
     anomaly_df.to_csv(output_file, index = False, header = False)
+    # plot
     if print_error:
         som_anomaly.som_grid.plot_error()
+    if print_heat:
+        som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
+    if print_projection:
+        som_anomaly.plot_heatmap()
 
 
 if __name__ == '__main__':
