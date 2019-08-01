@@ -124,7 +124,6 @@ class kohonen:
             chose_i = int(np.random.choice(obs_id, size = 1))
             # BMU - self.bmu
             rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
-            # bmu_id = int(self.bmu) % self.net_dim[0]
             bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
             self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)

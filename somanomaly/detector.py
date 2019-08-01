@@ -77,10 +77,24 @@ class SomDetect:
         som_anomaly = None
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
+        # if threshold == "quantile" or threshold == "mean":
+        #     if threshold == "quantile":
+        #         threshold = np.quantile(self.som_grid.dist_normal, 2/3)
+        #     elif threshold = "mean":
+        #         threshold = np.mean(self.som_grid.dist_normal)
+        #     dist_anomaly = 0
+        #     for i in range(self.som_te.window_data.shape[0]):
+        #         for j in self.som_grid.project.astype(int):
+        #             dist_anomaly += np.sum([self.som_grid.dist_mat(self.som_te, i, j)])
+        #     som_anomaly = dist_anomaly > threshold
         if threshold == "quantile":
             # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
             # threshold = np.quantile(dist_normal, 2 / 3)
             threshold = np.quantile(self.som_grid.dist_normal, 2/3)
+        elif threshold == "mean":
+            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
+            # threshold = np.mean(dist_normal)
+            threshold = np.mean(self.som_grid.dist_normal)
         elif threshold == "radius":
             threshold = self.som_grid.initial_r
             normal_project = np.unique(self.som_grid.project)
@@ -90,10 +104,6 @@ class SomDetect:
                 anomaly_project[i, :] = from_normal[i,:].flatten() > threshold
             anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
             som_anomaly = np.isin(self.project, anomaly_node)
-        elif threshold == "mean":
-            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
-            # threshold = np.mean(dist_normal)
-            threshold = np.mean(self.som_grid.dist_normal)
         if som_anomaly is None:
             som_anomaly = dist_anomaly > threshold
         self.window_anomaly[som_anomaly] = self.label[0]
