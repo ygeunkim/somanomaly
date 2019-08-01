@@ -91,6 +91,8 @@ You can see the following plots if writing each parameter.
 
 ```
 -1  Plot reconstruction error for each epoch
+-2  Plot heatmap of SOM
+-3  Plot heatmap of projection onto normal SOM
 ```
 
 ***
@@ -118,10 +120,22 @@ The algorithm requires computing *distance between matrices* - input matrix and 
 
 ### Anomaly detection
 
+#### Threshold by distances with codebook
+
 1. Build 3d array for online data-set.
 2. Compute each distance between weight (codebook) matrix.
 3. If the minimum is larger than threshold, the window is detected as anomaly.
 
 <p align="center">
     <img width="70%" height="43.26%" src="docs/som_detect.png">
+</p>
+
+#### Threshold by distances between nodes
+
+1. Project online data-set onto normal SOM.
+2. Compute distance between projection and normal projection.
+3. If the online projection is *not in the neighborhood of normal projection*, the window is detected as anomaly.
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/radius_detect.png">
 </p>

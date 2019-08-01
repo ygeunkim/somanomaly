@@ -74,17 +74,28 @@ class SomDetect:
         # message - remove later
         print("Projection to normal SOM neuron: \n", self.project)
         thr_types = ["quantile", "radius", "mean"]
+        som_anomaly = None
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         if threshold == "quantile":
-            dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
-            threshold = np.quantile(dist_normal, 2 / 3)
+            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
+            # threshold = np.quantile(dist_normal, 2 / 3)
+            threshold = np.quantile(self.som_grid.dist_normal, 2/3)
         elif threshold == "radius":
-            threshold = self.som_grid.sigma
+            threshold = self.som_grid.initial_r
+            normal_project = np.unique(self.som_grid.project)
+            from_normal = self.som_grid.dci[normal_project.astype(int), :]
+            anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
+            for i in range(normal_project.shape[0]):
+                anomaly_project[i, :] = from_normal[i,:].flatten() > threshold
+            anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
+            som_anomaly = np.isin(self.project, anomaly_node)
         elif threshold == "mean":
-            dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
-            threshold = np.mean(dist_normal)
-        som_anomaly = dist_anomaly > threshold
+            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
+            # threshold = np.mean(dist_normal)
+            threshold = np.mean(self.som_grid.dist_normal)
+        if som_anomaly is None:
+            som_anomaly = dist_anomaly > threshold
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 

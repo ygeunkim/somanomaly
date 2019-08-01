@@ -65,6 +65,7 @@ class kohonen:
         # som()
         self.alpha = None
         self.sigma = None
+        self.initial_r = None
         self.time_constant = None
         # find_bmu()
         self.bmu = None
@@ -74,7 +75,8 @@ class kohonen:
 
     def init_grid(self):
         """
-        order of
+        [row_pts, col_pts]
+        xdim x ydim rows (points)
         [1,1]
         [2,1]
         [1,2]
@@ -112,6 +114,7 @@ class kohonen:
         if init_radius is None:
             init_radius = np.quantile(self.dci, q = 2 / 3, axis = None)
         self.sigma = init_radius
+        self.initial_r = init_radius
         # time constant (lambda)
         self.time_constant = epoch / np.log(self.sigma)
         # distance between nodes
@@ -121,6 +124,7 @@ class kohonen:
             chose_i = int(np.random.choice(obs_id, size = 1))
             # BMU - self.bmu
             rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
+            # bmu_id = int(self.bmu) % self.net_dim[0]
             bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
             self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
@@ -151,9 +155,9 @@ class kohonen:
                 print("codebook matrix: \n", self.net[node_id, :, :])
                 print("------------------------------")
         self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
-        self.project = np.asarray(
-            [np.argmin([self.dist_mat(data, i, j) for j in range(self.net.shape[0])]) for i in range(data.shape[0])]
-        )
+        normal_distance = np.asarray([self.dist_weight(data, i) for i in range(data.shape[0])])
+        self.dist_normal = normal_distance[:, 0]
+        self.project = normal_distance[:, 1]
 
     def find_bmu(self, data, index):
         """
@@ -209,6 +213,15 @@ class kohonen:
                 return 1.0
             else:
                 return 0.0
+
+    def dist_weight(self, data, index):
+        """
+        :param data: Processed data set for SOM
+        :param index: index for data
+        :return: minimum distance between input matrix and weight matrices, its node id
+        """
+        dist_wt = np.asarray([self.dist_mat(data, index, j) for j in range(self.net.shape[0])])
+        return np.min(dist_wt), np.argmin(dist_wt)
 
     def plot_error(self):
         """
