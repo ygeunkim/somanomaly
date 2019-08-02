@@ -108,7 +108,7 @@ class kohonen:
         seq_epoch = np.arange(epoch) + 1
         # learning rate
         if init_rate is None:
-            init_rate = .05
+            init_rate = .5
         self.alpha = init_rate
         # radius of neighborhood
         if init_radius is None:
@@ -134,7 +134,7 @@ class kohonen:
             print("learning rate: %.3f" % self.alpha)
             print("BMU radius: %.3f" % self.sigma)
             print("------------------------------")
-            # neighboring nodes
+            # neighboring nodes (includes BMU)
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
             # message - remove later
             print("distance between BMU and node: ", bmu_dist)

@@ -8,7 +8,7 @@ def train_example(path):
     """
     :param path: normal data set path
     """
-    win_data = SomData(path, range(2, 7), 300, 50)
+    win_data = SomData(path, range(2, 7), True, 300, 50)
     print("------------------------------")
     print(win_data.window_data.shape)
     print("------------------------------")
