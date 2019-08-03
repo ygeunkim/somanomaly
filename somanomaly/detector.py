@@ -23,14 +23,13 @@ class SomDetect:
     """
 
     def __init__(
-            self, path_normal, path_online, cols = None, standardization = False, window_size = 60, jump_size = 60,
+            self, path_normal, path_online, cols = None, window_size = 60, jump_size = 60,
             xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian", dist = "frobenius", seed = None
     ):
         """
         :param path_normal: file path of normal data set
         :param path_online: file path of online data set
         :param cols: column index to read
-        :param standardization: standardize the data?
         :param window_size: window size
         :param jump_size: shift size
         :param xdim: Number of x-grid
@@ -40,8 +39,8 @@ class SomDetect:
         :param dist: Distance function - frobenius, nuclear, or
         :param seed: Random seed
         """
-        self.som_tr = SomData(path_normal, cols, standardization, window_size, jump_size)
-        self.som_te = SomData(path_online, cols, standardization, window_size, jump_size)
+        self.som_tr = SomData(path_normal, cols, window_size, jump_size)
+        self.som_te = SomData(path_online, cols, window_size, jump_size)
         self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, seed)
         # anomaly
         self.label = None
@@ -160,7 +159,6 @@ def main(argv):
     online_file = ""
     output_file = ""
     cols = None
-    standardization = False
     # training arguments
     window_size = 60
     jump_size = 60
@@ -181,10 +179,9 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:gw:j:x:y:t:f:d:s:l:m:e:a:r:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:s:l:m:e:a:r:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
-                                    "Standardization",
                                     "Window size=(default:60)", "Jump size=(default:60)",
                                     "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
@@ -212,7 +209,6 @@ def main(argv):
             -o: Online data set file
             -c: first and the last column indices to read, e.g. 1, 5
                 Default = None
-            -g: If specified, standardize the data
             -p: Output file
             -w: window size
                 Default = 60
@@ -258,8 +254,6 @@ def main(argv):
         elif opt in ("-c"):
             cols = str(arg).strip().split(',')
             cols = range(int(cols[0]), int(cols[1]))
-        elif opt in ("-g"):
-            standardization = True
         elif opt in ("-w"):
             window_size = int(arg)
         elif opt in ("-j"):
@@ -293,7 +287,7 @@ def main(argv):
             print_heat = True
         elif opt in ("-3"):
             print_projection = True
-    som_anomaly = SomDetect(normal_file, online_file, cols, standardization,
+    som_anomaly = SomDetect(normal_file, online_file, cols,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
@@ -311,5 +305,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    np.set_printoptions(precision=3)
+    np.set_printoptions(precision = 3)
     main(sys.argv[1:])

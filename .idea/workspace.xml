@@ -5,6 +5,8 @@
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/onlinesom.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/onlinesom.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/window.py" afterDir="false" />
@@ -49,7 +51,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_anomaly">
+  <component name="RunManager" selected="Python.test_som">
     <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="onlinesom" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -120,8 +122,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.test_anomaly" />
         <item itemvalue="Python.test_som" />
+        <item itemvalue="Python.test_anomaly" />
         <item itemvalue="Python.__init__" />
       </list>
     </recent_temporary>

@@ -2,3 +2,4 @@ Numpy
 scipy
 pandas
 plotly
+scikit-learn

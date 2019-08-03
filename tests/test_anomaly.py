@@ -12,7 +12,7 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     :param xgrid: number of x-grid
     :param ygrid: number of y-grid
     """
-    som_anomaly = SomDetect(path_normal, path_on, range(2, 51), standardization = True,
+    som_anomaly = SomDetect(path_normal, path_on, range(2, 51),
                             window_size = win, jump_size = jump,
                             xdim = xgrid, ydim = ygrid)
     print("------------------------------")

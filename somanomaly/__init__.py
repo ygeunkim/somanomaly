@@ -123,7 +123,10 @@ class kohonen:
         for i in range(epoch):
             chose_i = int(np.random.choice(obs_id, size = 1))
             # BMU - self.bmu
-            rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
+            self.find_bmu(data, chose_i)
+            # reconstruction error - sum of distances from BMU
+            rcst_err[i] = np.sum([np.square(self.dist_mat(data, obs, self.bmu.astype(int))) for obs in range(data.shape[0])])
+            # rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
             bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
             self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
@@ -162,11 +165,9 @@ class kohonen:
         """
         :param data: Processed data set for SOM.
         :param index: Randomly chosen observation id for input matrix among 3d tensor set.
-        :return: Reconstruction error
         """
         dist_code = np.asarray([self.dist_mat(data, index, j) for j in range(self.net.shape[0])])
         self.bmu = np.argmin(dist_code)
-        return np.square(dist_code)
 
     def dist_mat(self, data, index, node):
         """

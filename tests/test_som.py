@@ -8,12 +8,12 @@ def train_example(path):
     """
     :param path: normal data set path
     """
-    win_data = SomData(path, range(2, 7), True, 300, 50)
+    win_data = SomData(path, range(2, 51), 300, 50)
     print("------------------------------")
     print(win_data.window_data.shape)
     print("------------------------------")
     som_grid = kohonen(win_data.window_data, 10, 10)
-    som_grid.som(data = win_data.window_data)
+    som_grid.som(data = win_data.window_data, epoch = 100)
     som_grid.plot_error()
     som_grid.plot_heatmap(win_data.window_data)
 
