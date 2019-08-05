@@ -1,4 +1,4 @@
-# <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
+# <img alt="SomAnomaly" src="https://github.com/ygeunkim/somanomaly/blob/master/docs/somanomaly_icon.png" height="60">
 
 **Online SOM Detector** - Anomaly detection using Self-Organizing Maps
 
