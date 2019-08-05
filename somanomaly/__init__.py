@@ -29,14 +29,18 @@ class kohonen:
         Learning rate: ⍺(t) = ⍺_0 * exp(-t / ƛ)
     """
 
-    def __init__(self, data, xdim, ydim, topo = "rectangular", neighbor = "gaussian", dist = "frobenius", seed = None):
+    def __init__(
+            self, data, xdim, ydim, topo = "rectangular", neighbor = "gaussian",
+            dist = "frobenius", decay = "exponential", seed = None
+    ):
         """
         :param data: 3d array. processed data set for Online SOM Detector
         :param xdim: Number of x-grid
         :param ydim: Number of y-grid
         :param topo: Topology of output space - rectangular or hexagonal
-        :param neighbor: Neighborhood function - gaussian or bubble
-        :param dist: Distance function - frobenius, nuclear, or
+        :param neighbor: Neighborhood function - gaussian, bubble, or triangular
+        :param dist: Distance function - frobenius, nuclear, mahalanobis (just form of mahalanobis), or
+        :param decay: decaying learning rate and radius - exponential or linear
         :param seed: Random seed
         """
         np.random.seed(seed = seed)
@@ -53,15 +57,20 @@ class kohonen:
         self.init_grid()
         self.dist_node()
         # Neighborhood function
-        neighbor_types = ["gaussian", "bubble"]
+        neighbor_types = ["gaussian", "bubble", "triangular"]
         if neighbor not in neighbor_types:
             raise ValueError("Invalid neighbor. Expected one of: %s" % neighbor_types)
         self.neighbor_func = neighbor
         # Distance function
-        dist_type = ["frobenius", "nuclear"]
+        dist_type = ["frobenius", "nuclear", "mahalanobis"]
         if dist not in dist_type:
             raise ValueError("Invalid dist. Expected one of: %s" % dist_type)
         self.dist_func = dist
+        # Decay
+        decay_types = ["exponential", "linear"]
+        if decay not in decay_types:
+            raise ValueError("Invalid decay. Expected one of: %s" % decay_types)
+        self.decay_func = decay
         # som()
         self.alpha = None
         self.sigma = None
@@ -81,6 +90,8 @@ class kohonen:
         [2,1]
         [1,2]
         [2,2]
+        2--------->
+        1--------->^
         """
         self.pts = np.array(
             np.meshgrid(
@@ -102,8 +113,7 @@ class kohonen:
         num_obs = data.shape[0]
         obs_id = np.arange(num_obs)
         chose_i = np.empty(1)
-        # bmu_node = np.empty(1)
-        # node_id = None
+        node_id = None
         hci = None
         seq_epoch = np.arange(epoch) + 1
         # learning rate
@@ -116,7 +126,10 @@ class kohonen:
         self.sigma = init_radius
         self.initial_r = init_radius
         # time constant (lambda)
-        self.time_constant = epoch / np.log(self.sigma)
+        if self.decay_func == "exponential":
+            self.time_constant = epoch / np.log(self.sigma)
+        elif self.decay_func == "linear":
+            self.time_constant = 1 / epoch
         # distance between nodes
         bmu_dist = self.dci[1, :]
         rcst_err = np.empty(epoch)
@@ -125,12 +138,11 @@ class kohonen:
             # BMU - self.bmu
             self.find_bmu(data, chose_i)
             # reconstruction error - sum of distances from BMU
-            rcst_err[i] = np.sum([np.square(self.dist_mat(data, obs, self.bmu.astype(int))) for obs in range(data.shape[0])])
-            # rcst_err[i] = np.sum(self.find_bmu(data, chose_i))
+            rcst_err[i] = np.sum([np.square(self.dist_mat(data, j, self.bmu.astype(int))) for j in range(data.shape[0])])
             bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
-            self.sigma = kohonen.decay(init_radius, i + 1, self.time_constant)
-            self.alpha = kohonen.decay(init_rate, i + 1, self.time_constant)
+            self.sigma = self.decay(init_radius, i + 1, self.time_constant)
+            self.alpha = self.decay(init_rate, i + 1, self.time_constant)
             # message - remove later
             print("=============================================================")
             print("epoch: ", i + 1)
@@ -157,6 +169,9 @@ class kohonen:
                 print("codebook matrix: \n", self.net[node_id, :, :])
                 print("------------------------------")
         self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
+        # message - remove later
+        print("mapping to SOM grid\n------------------------------")
+        # Map to SOM = BMU
         normal_distance = np.asarray([self.dist_weight(data, i) for i in range(data.shape[0])])
         self.dist_normal = normal_distance[:, 0]
         self.project = normal_distance[:, 1]
@@ -180,6 +195,11 @@ class kohonen:
             return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "fro")
         elif self.dist_func == "nuclear":
             return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "nuc")
+        elif self.dist_func == "mahalanobis":
+            x = data[index, :, :] - self.net[node, :, :]
+            covmat = np.cov(x.T)
+            ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            return np.sqrt(np.trace(ss))
 
     def dist_node(self):
         """
@@ -190,15 +210,17 @@ class kohonen:
         elif self.topo == "rectangular":
             self.dci = distance.cdist(self.pts, self.pts, "chebyshev")
 
-    @staticmethod
-    def decay(init, time, time_constant):
+    def decay(self, init, time, time_constant):
         """
         :param init: initial value
         :param time: t
         :param time_constant: lambda
         :return: decaying value of alpha or sigma
         """
-        return init * np.exp(-time / time_constant)
+        if self.decay_func == "exponential":
+            return init * np.exp(-time / time_constant)
+        elif self.decay_func == "linear":
+            return init - time * time_constant
 
     def neighborhood(self, node_distance, radius):
         """
@@ -213,12 +235,17 @@ class kohonen:
                 return 1.0
             else:
                 return 0.0
+        elif self.neighbor_func == "triangular":
+            if node_distance <= radius:
+                return 1 - np.abs(node_distance) / radius
+            else:
+                return 0.0
 
     def dist_weight(self, data, index):
         """
         :param data: Processed data set for SOM
         :param index: index for data
-        :return: minimum distance between input matrix and weight matrices, its node id
+        :return: minimum distance between input matrix and weight matrices, its node id (BMU)
         """
         dist_wt = np.asarray([self.dist_mat(data, index, j) for j in range(self.net.shape[0])])
         return np.min(dist_wt), np.argmin(dist_wt)
@@ -236,8 +263,8 @@ class kohonen:
         """
         neuron_grid = np.empty((self.net_dim[0], self.net_dim[1]))
         node_id = 0
-        for j in range(self.net_dim[0]):
-            for i in range(self.net_dim[1]):
+        for j in range(self.net_dim[1]):
+            for i in range(self.net_dim[0]):
                 neuron_grid[i, j] = (self.project == node_id).sum()
                 node_id += 1
         fig = go.Figure(

@@ -2,9 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/somanomaly_icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/docs/somanomaly_icon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/somanomaly_icon.svg" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/node_detect.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_anomaly.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_anomaly.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_som.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_som.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -44,7 +47,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.test_som">
+  <component name="RunManager" selected="Python.test_anomaly">
     <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="onlinesom" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -115,8 +118,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.test_som" />
         <item itemvalue="Python.test_anomaly" />
+        <item itemvalue="Python.test_som" />
         <item itemvalue="Python.__init__" />
       </list>
     </recent_temporary>

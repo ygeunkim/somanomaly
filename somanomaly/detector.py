@@ -15,16 +15,17 @@ class SomDetect:
         2. online data set
     1. normal SomData - Make normal data-set to SomData
     2. Fit SOM to normal SomData: U-array
-    3. online SomData - Make online data-st to SomData
-    3. Foreach row (0-axis) of online SomData:
+    3. online SomData - Make online data-set to SomData
+    4. Foreach row (0-axis) of online SomData:
         distance from each U-array
-        compare with kohonen.sigma (radius)
+        compare with threshold
         if every value is larger than threshold, anomaly
     """
 
     def __init__(
             self, path_normal, path_online, cols = None, window_size = 60, jump_size = 60,
-            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian", dist = "frobenius", seed = None
+            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian",
+            dist = "frobenius", decay = "exponential", seed = None
     ):
         """
         :param path_normal: file path of normal data set
@@ -37,11 +38,12 @@ class SomDetect:
         :param topo: Topology of output space - rectangular or hexagonal
         :param neighbor: Neighborhood function - gaussian or bubble
         :param dist: Distance function - frobenius, nuclear, or
+        :param decay: decaying learning rate and radius - exponential or linear
         :param seed: Random seed
         """
         self.som_tr = SomData(path_normal, cols, window_size, jump_size)
         self.som_te = SomData(path_online, cols, window_size, jump_size)
-        self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, seed)
+        self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
         # anomaly
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
@@ -68,6 +70,10 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
+        # message - remove later
+        print("------------------------------")
+        print("mapping online set to SOM")
+        print("------------------------------")
         som_dist_calc = np.asarray([self.dist_uarray(i) for i in range(self.som_te.window_data.shape[0])])
         dist_anomaly = som_dist_calc[:, 0]
         self.project = som_dist_calc[:, 1]
@@ -75,37 +81,32 @@ class SomDetect:
         print("Projection to normal SOM neuron: \n", self.project)
         thr_types = ["quantile", "radius", "mean"]
         som_anomaly = None
+        # message - remove later
+        print("------------------------------")
+        print("Detecting anomalies")
+        print("------------------------------")
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        # if threshold == "quantile" or threshold == "mean":
-        #     if threshold == "quantile":
-        #         threshold = np.quantile(self.som_grid.dist_normal, 2/3)
-        #     elif threshold = "mean":
-        #         threshold = np.mean(self.som_grid.dist_normal)
-        #     dist_anomaly = 0
-        #     for i in range(self.som_te.window_data.shape[0]):
-        #         for j in self.som_grid.project.astype(int):
-        #             dist_anomaly += np.sum([self.som_grid.dist_mat(self.som_te, i, j)])
-        #     som_anomaly = dist_anomaly > threshold
+        anomaly_threshold = None
         if threshold == "quantile":
             # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
             # threshold = np.quantile(dist_normal, 2 / 3)
-            threshold = np.quantile(self.som_grid.dist_normal, 2/3)
+            anomaly_threshold = np.quantile(self.som_grid.dist_normal, 2/3)
         elif threshold == "mean":
             # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
             # threshold = np.mean(dist_normal)
-            threshold = np.mean(self.som_grid.dist_normal)
+            anomaly_threshold = np.mean(self.som_grid.dist_normal)
         elif threshold == "radius":
-            threshold = self.som_grid.initial_r
+            anomaly_threshold = self.som_grid.initial_r
             normal_project = np.unique(self.som_grid.project)
             from_normal = self.som_grid.dci[normal_project.astype(int), :]
             anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
             for i in range(normal_project.shape[0]):
-                anomaly_project[i, :] = from_normal[i,:].flatten() > threshold
+                anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
             anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
             som_anomaly = np.isin(self.project, anomaly_node)
         if som_anomaly is None:
-            som_anomaly = dist_anomaly > threshold
+            som_anomaly = dist_anomaly > anomaly_threshold
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 
@@ -130,6 +131,10 @@ class SomDetect:
         jump_size = (self.som_te.n - win_size) // (self.som_te.window_data.shape[0] - 1)
         # first assign by normal
         self.anomaly = np.repeat(self.label[1], self.anomaly.shape[0])
+        # message - remove later
+        print("------------------------------")
+        print("Anomaly unit change")
+        print("------------------------------")
         for i in range(self.window_anomaly.shape[0]):
             if self.window_anomaly[i] == self.label[0]:
                 for j in range(i * jump_size, i * jump_size + win_size):
@@ -144,8 +149,8 @@ class SomDetect:
         ydim = self.som_grid.net_dim[1]
         neuron_grid = np.empty((xdim, ydim))
         node_id = 0
-        for j in range(xdim):
-            for i in range(ydim):
+        for j in range(ydim):
+            for i in range(xdim):
                 neuron_grid[i, j] = (self.project == node_id).sum()
                 node_id += 1
         fig = go.Figure(
@@ -167,6 +172,7 @@ def main(argv):
     topo = "rectangular"
     neighbor = "gaussian"
     dist = "frobenius"
+    decay = "exponential"
     seed = None
     epoch = 100
     init_rate = None
@@ -179,12 +185,13 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:s:l:m:e:a:r:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "Window size=(default:60)", "Jump size=(default:60)",
                                     "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
+                                    "Decay=(default:exponential)",
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:mean)",
                                     "Epoch number=(default:100)",
                                     "Initial learning rate=(default:0.5)", "Initial radius=(default:function)",
@@ -224,6 +231,8 @@ def main(argv):
                 Default = gaussian
             -d: distance function - frobenius or nuclear
                 Default = frobenius
+            -g: decaying function - exponential or linear
+                Default = exponential
             -s: random seed
                 Default = current system time
             -e: epoch number
@@ -268,6 +277,8 @@ def main(argv):
             neighbor = arg
         elif opt in ("-d"):
             dist = arg
+        elif opt in ("-g"):
+            decay = arg
         elif opt in ("-s"):
             seed = int(arg)
         elif opt in ("-l"):
@@ -289,7 +300,7 @@ def main(argv):
             print_projection = True
     som_anomaly = SomDetect(normal_file, online_file, cols,
                             window_size, jump_size,
-                            xdim, ydim, topo, neighbor, dist, seed)
+                            xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
     som_anomaly.detect_anomaly(label = label, threshold = threshold)
     som_anomaly.label_anomaly()
