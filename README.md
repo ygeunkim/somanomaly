@@ -1,4 +1,4 @@
-# SomAnomaly
+# <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
 
 **Online SOM Detector** - Anomaly detection using Self-Organizing Maps
 
@@ -22,7 +22,7 @@ python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <out
                         {-t} <topology> {-f} <neighborhood> {-d} <distance> {-s} <seed>  
                         {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                         {-l} <label> {-m} <threshold>
-                        {-1}
+                        {-1} {-2} {-3}
 ```
 
 The following is a description of each argument.
@@ -35,7 +35,7 @@ The following is a description of each argument.
 
 #### Input file
 
-For now, this function reads only `*.csv` files.
+For now, this function reads only `*.csv` files using `pandas.read_csv()`
 
 ```
 -n  Normal dataset file
