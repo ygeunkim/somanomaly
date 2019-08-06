@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 class SomData:
@@ -23,7 +24,7 @@ class SomData:
         self.n = data.shape[0]
         win_num = (self.n - window_size) // jump_size + 1
         self.window_data = np.empty((win_num, window_size, data.shape[1]))
-        for i in range(win_num):
+        for i in tqdm(range(win_num), desc = "bind window"):
             self.window_data[i, :, :] = data[range(i * jump_size, i * jump_size + window_size), :]
 
     @staticmethod

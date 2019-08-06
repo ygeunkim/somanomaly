@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 from scipy.spatial import distance
+from tqdm import tqdm
 
 
 class kohonen:
@@ -136,7 +137,7 @@ class kohonen:
         # distance between nodes
         bmu_dist = self.dci[1, :]
         rcst_err = np.empty(epoch)
-        for i in range(epoch):
+        for i in tqdm(range(epoch), desc = "epoch"):
             chose_i = int(np.random.choice(obs_id, size = 1))
             # BMU - self.bmu
             self.find_bmu(data, chose_i)
@@ -146,36 +147,18 @@ class kohonen:
             # decay
             self.sigma = self.decay(init_radius, i + 1, self.time_constant)
             self.alpha = self.decay(init_rate, i + 1, self.time_constant)
-            # message - remove later
-            print("=============================================================")
-            print("epoch: ", i + 1)
-            print("learning rate: %.3f" % self.alpha)
-            print("BMU radius: %.3f" % self.sigma)
-            print("------------------------------")
             # neighboring nodes (includes BMU)
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
-            # message - remove later
-            print("distance between BMU and node: ", bmu_dist)
-            print("neighboring neuron: ", neighbor_neuron)
-            print("------------------------------")
-            for k in range(neighbor_neuron.shape[0]):
+            for k in tqdm(range(neighbor_neuron.shape[0]), desc = "updating"):
                 node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
-                # message - remove later
-                print("node: ", node_id)
-                print("neighborhood function value: %.3f" % hci)
                 # update codebook matrices of neighboring nodes
                 self.net[node_id, :, :] += \
                     self.alpha * hci * \
                     (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
-                # message - remove later
-                print("codebook matrix: \n", self.net[node_id, :, :])
-                print("------------------------------")
         self.reconstruction_error = pd.DataFrame({"Epoch": np.arange(self.epoch) + 1, "Reconstruction Error": rcst_err})
-        # message - remove later
-        print("mapping to SOM grid\n------------------------------")
         # Map to SOM = BMU
-        normal_distance = np.asarray([self.dist_weight(data, i) for i in range(data.shape[0])])
+        normal_distance = np.asarray([self.dist_weight(data, i) for i in tqdm(range(data.shape[0]), desc = "mapping")])
         self.dist_normal = normal_distance[:, 0]
         self.project = normal_distance[:, 1]
 
@@ -250,7 +233,7 @@ class kohonen:
         :param index: index for data
         :return: minimum distance between input matrix and weight matrices, its node id (BMU)
         """
-        dist_wt = np.asarray([self.dist_mat(data, index, j) for j in range(self.net.shape[0])])
+        dist_wt = np.asarray([self.dist_mat(data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
 
     def plot_error(self):

@@ -1,6 +1,6 @@
 # <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
 
-**Online SOM Detector** - Anomaly detection using Self-Organizing Maps
+**Online SOM Detector** - Anomaly detection using <span style="color:blue"> Self-Organizing Maps </span>
 
 ## Building
 
@@ -19,8 +19,8 @@ In terminal, you can run *Online SOM detector* using `somanomaly/detector.py`:
 cd somanomaly
 python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
                         {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
-                        {-t} <topology> {-f} <neighborhood> {-d} <distance> {-s} <seed>  
-                        {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+                        {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay>
+                        {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                         {-l} <label> {-m} <threshold>
                         {-1} {-2} {-3}
 ```
@@ -83,7 +83,7 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - mean (default), 0.75 quantile, or radius
+-m  Threshold method - mean (default), 0.75 quantile, radius, or inv_som
 ```
 
 #### Plot

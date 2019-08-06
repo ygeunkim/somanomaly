@@ -25,5 +25,5 @@ setuptools.setup(
         "Self-Organizing Maps",
         "Anomaly Detection"
     ],
-    install_requires=["numpy", "scipy", "pandas", "plotly", "scikit-learn"]
+    install_requires=["numpy", "scipy", "pandas", "plotly", "scikit-learn", "tqdm"]
 )

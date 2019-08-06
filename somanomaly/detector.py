@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import getopt
 import plotly.graph_objs as go
+from tqdm import tqdm
 from somanomaly import kohonen
 from somanomaly.window import SomData
 
@@ -75,21 +76,11 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        # message - remove later
-        print("------------------------------")
-        print("mapping online set to SOM")
-        print("------------------------------")
-        som_dist_calc = np.asarray([self.dist_uarray(i) for i in range(self.som_te.window_data.shape[0])])
+        som_dist_calc = np.asarray([self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc = "mapping online set")])
         dist_anomaly = som_dist_calc[:, 0]
         self.project = som_dist_calc[:, 1]
-        # message - remove later
-        print("Projection to normal SOM neuron: \n", self.project)
         thr_types = ["quantile", "radius", "mean", "inv_som"]
         som_anomaly = None
-        # message - remove later
-        print("------------------------------")
-        print("Detecting anomalies")
-        print("------------------------------")
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         anomaly_threshold = None
@@ -123,7 +114,7 @@ class SomDetect:
         :return: minimum distance between online data set and weight matrix
         """
         # normal_map = np.unique(self.som_grid.project)
-        dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in range(self.som_grid.net.shape[0])])
+        dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.som_grid.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
 
     def dist_normal(self, index):
@@ -164,13 +155,9 @@ class SomDetect:
         jump_size = (self.som_te.n - win_size) // (self.som_te.window_data.shape[0] - 1)
         # first assign by normal
         self.anomaly = np.repeat(self.label[1], self.anomaly.shape[0])
-        # message - remove later
-        print("------------------------------")
-        print("Anomaly unit change")
-        print("------------------------------")
-        for i in range(self.window_anomaly.shape[0]):
+        for i in tqdm(range(self.window_anomaly.shape[0]), desc = "anomaly unit change"):
             if self.window_anomaly[i] == self.label[0]:
-                for j in range(i * jump_size, i * jump_size + win_size):
+                for j in tqdm(range(i * jump_size, i * jump_size + win_size), desc = "observation unit"):
                     if self.anomaly[j] != self.label[0]:
                         self.anomaly[j] = self.label[0]
 
@@ -235,10 +222,10 @@ def main(argv):
         print(err)
         usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
                                                     {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
-                                                    {-t} <topology> {-f} <neighborhood> {-d} <distance> {-s} <seed>  
-                                                    {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+                                                    {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay> 
+                                                    {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                                                     {-l} <label> {-m} <threshold>
-                                                    {-1}
+                                                    {-1} {-2} {-3}
         """
         print(usage_message)
         sys.exit(2)
