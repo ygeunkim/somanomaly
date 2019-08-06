@@ -249,7 +249,7 @@ def main(argv):
                 Default = rectangular
             -f: neighborhood function - gaussian or bubble
                 Default = gaussian
-            -d: distance function - frobenius or nuclear
+            -d: distance function - frobenius, nuclear, or mahalanobis
                 Default = frobenius
             -g: decaying function - exponential or linear
                 Default = exponential

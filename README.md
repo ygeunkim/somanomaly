@@ -71,7 +71,7 @@ So all these are optional arguments.
 -y  Number of y-grid (Default = 20)
 -t  Topology of SOM output space - rectangular (default) or hexagonal
 -f  Neighborhood function - gaussian (default) or bubble
--d  Distance function - frobenius (default) or nuclear
+-d  Distance function - frobenius (default), nuclear, or mahalanobis
 -g  Decaying function - exponential (default) or linear
 -s  Random seed (Default = system time)
 -e  Epoch number (Default = 100)
