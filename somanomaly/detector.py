@@ -48,6 +48,11 @@ class SomDetect:
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
         self.anomaly = np.empty(self.som_te.n)
+        # som settings
+        self.topo = topo
+        self.h = neighbor
+        self.d = dist
+        self.decay = decay
         # plot
         self.project = np.empty(self.som_te.window_data.shape[0])
 
@@ -62,7 +67,7 @@ class SomDetect:
     def detect_anomaly(self, label = None, threshold = "quantile"):
         """
         :param label: anomaly and normal label list
-        :param threshold: threshold for detection - quantile, radius or mean
+        :param threshold: threshold for detection - quantile, radius, mean, or inv_som
         :return: Anomaly detection
         """
         if label is None:
@@ -79,7 +84,7 @@ class SomDetect:
         self.project = som_dist_calc[:, 1]
         # message - remove later
         print("Projection to normal SOM neuron: \n", self.project)
-        thr_types = ["quantile", "radius", "mean"]
+        thr_types = ["quantile", "radius", "mean", "inv_som"]
         som_anomaly = None
         # message - remove later
         print("------------------------------")
@@ -105,6 +110,8 @@ class SomDetect:
                 anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
             anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
             som_anomaly = np.isin(self.project, anomaly_node)
+        elif threshold == "inv_som":
+            som_anomaly = self.inverse_som()
         if som_anomaly is None:
             som_anomaly = dist_anomaly > anomaly_threshold
         self.window_anomaly[som_anomaly] = self.label[0]
@@ -125,6 +132,32 @@ class SomDetect:
         :return: every distance between normal som matrix and weight matrix
         """
         return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in range(self.som_grid.net.shape[0])])
+
+    def inverse_som(self):
+        """
+        :return: SOM online data set to codebook matrix -> True if empty grid (anomaly)
+        """
+        n = self.som_te.window_data.shape[0]
+        if np.sqrt(n).is_integer():
+            xdim = np.sqrt(n)
+            ydim = xdim
+        else:
+            xdim = int(np.sqrt(n))
+            ydim = n / xdim
+            while not ydim.is_integer():
+                xdim -= 1
+                ydim = n / xdim
+        online_kohonen = kohonen(
+            data = self.som_grid.net, xdim = int(xdim), ydim = int(ydim), topo = self.topo,
+            neighbor = self.h, dist = self.d, decay = self.decay
+        )
+        online_kohonen.net = self.som_te.window_data
+        online_kohonen.som(
+            data = self.som_grid.net, epoch = self.som_grid.epoch,
+            init_rate = self.som_grid.initial_learn, init_radius = self.som_grid.initial_r
+        )
+        som_map = np.arange(n)
+        return np.isin(som_map, online_kohonen.project, invert = True)
 
     def label_anomaly(self):
         win_size = self.som_te.window_data.shape[1]
@@ -243,7 +276,7 @@ def main(argv):
                 Default = 2/3 quantile of every distance between nodes
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, or mean
+            -m: threshold method - quantile, radius, mean, or inv_som
                 Default = mean
             -1: plot reconstruction error path
                 Default = do not plot

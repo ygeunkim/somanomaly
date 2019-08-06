@@ -72,8 +72,10 @@ class kohonen:
             raise ValueError("Invalid decay. Expected one of: %s" % decay_types)
         self.decay_func = decay
         # som()
+        self.epoch = None
         self.alpha = None
         self.sigma = None
+        self.initial_learn = None
         self.initial_r = None
         self.time_constant = None
         # find_bmu()
@@ -115,11 +117,12 @@ class kohonen:
         chose_i = np.empty(1)
         node_id = None
         hci = None
-        seq_epoch = np.arange(epoch) + 1
+        self.epoch = epoch
         # learning rate
         if init_rate is None:
             init_rate = .5
         self.alpha = init_rate
+        self.initial_learn = init_rate
         # radius of neighborhood
         if init_radius is None:
             init_radius = np.quantile(self.dci, q = 2 / 3, axis = None)
@@ -168,7 +171,7 @@ class kohonen:
                 # message - remove later
                 print("codebook matrix: \n", self.net[node_id, :, :])
                 print("------------------------------")
-        self.reconstruction_error = pd.DataFrame({"Epoch": seq_epoch, "Reconstruction Error": rcst_err})
+        self.reconstruction_error = pd.DataFrame({"Epoch": np.arange(self.epoch) + 1, "Reconstruction Error": rcst_err})
         # message - remove later
         print("mapping to SOM grid\n------------------------------")
         # Map to SOM = BMU

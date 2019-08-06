@@ -72,6 +72,7 @@ So all these are optional arguments.
 -t  Topology of SOM output space - rectangular (default) or hexagonal
 -f  Neighborhood function - gaussian (default) or bubble
 -d  Distance function - frobenius (default) or nuclear
+-g  Decaying function - exponential (default) or linear
 -s  Random seed (Default = system time)
 -e  Epoch number (Default = 100)
 -a  Initial learning rate (Default = 0.05)
@@ -139,3 +140,9 @@ The algorithm requires computing *distance between matrices* - input matrix and 
 <p align="center">
     <img width="70%" height="43.26%" src="docs/radius_detect.png">
 </p>
+
+#### Inverse SOM
+
+1. Apply Online data set to codebook matrices
+2. Map codebooks to SOM
+3. Detect *empty grids* (online windows) as anomalies 
