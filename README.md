@@ -146,3 +146,14 @@ The algorithm requires computing *distance between matrices* - input matrix and 
 1. Apply Online data set to codebook matrices
 2. Map codebooks to SOM
 3. Detect *empty grids* (online windows) as anomalies 
+
+#### 2-means clustering
+
+Perform 2-means clustering for codebook matrices and online data-set.
+
+1. Set codebook matrices by group 0. This group indicates normal and does not change.
+2. Randomly assign group 0 or 1 for online data-set.
+3. Iterate until cluster converges:
+    1. For each cluster, compute centroid.
+    2. Compute distance between centroid and every online matrix.
+    3. Assign each online observation matrix to the group with smaller distance.

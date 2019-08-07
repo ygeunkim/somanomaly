@@ -247,13 +247,22 @@ class kohonen:
         """
         :return: Heatmap for SOM
         """
-        neuron_grid = np.empty((self.net_dim[0], self.net_dim[1]))
-        node_id = 0
-        for j in range(self.net_dim[1]):
-            for i in range(self.net_dim[0]):
-                neuron_grid[i, j] = (self.project == node_id).sum()
-                node_id += 1
+        # neuron_grid = np.empty((self.net_dim[1], self.net_dim[0]))
+        # node_id = 0
+        # for j in range(self.net_dim[1]):
+        #     for i in range(self.net_dim[0]):
+        #         neuron_grid[i, j] = (self.project == node_id).sum()
+        #         node_id += 1
+        # fig = go.Figure(
+        #     data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+        # )
+        x = self.project % self.net_dim[0]
+        y = self.project // self.net_dim[0]
         fig = go.Figure(
-            data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+            go.Histogram2d(
+                x = x,
+                y = y,
+                colorscale = "Viridis"
+            )
         )
         fig.show()

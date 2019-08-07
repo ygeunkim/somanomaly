@@ -79,7 +79,7 @@ class SomDetect:
         som_dist_calc = np.asarray([self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc = "mapping online set")])
         dist_anomaly = som_dist_calc[:, 0]
         self.project = som_dist_calc[:, 1]
-        thr_types = ["quantile", "radius", "mean", "inv_som"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans"]
         som_anomaly = None
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
@@ -97,12 +97,38 @@ class SomDetect:
             normal_project = np.unique(self.som_grid.project)
             from_normal = self.som_grid.dci[normal_project.astype(int), :]
             anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
-            for i in range(normal_project.shape[0]):
+            for i in tqdm(range(normal_project.shape[0]), desc = "neighboring"):
                 anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
             anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
             som_anomaly = np.isin(self.project, anomaly_node)
         elif threshold == "inv_som":
             som_anomaly = self.inverse_som()
+        elif threshold == "kmeans":
+            # cluster = np.zeros(self.som_grid.net.shape[0] + self.som_te.window_data.shape[0])
+            # cluster[self.som_grid.net.shape[0]:] = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
+            cluster = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
+            cluster_change = cluster + 1
+            centroid1 = np.empty((self.som_grid.net.shape[1], self.som_grid.net.shape[2]))
+            centroid2 = centroid1
+            while not np.array_equal(cluster, cluster_change):
+                normal_array = np.append(
+                    self.som_grid.net, self.som_te.window_data[cluster == 0, :, :], axis = 0
+                )
+                anom_array = self.som_te.window_data[cluster == 1, :, :]
+                centroid1 = np.mean(normal_array, axis = 0)
+                centroid2 = np.mean(anom_array, axis = 0)
+                cluster_change = cluster
+                for i in range(self.som_te.window_data.shape[0]):
+                    dist1 = self.dist_mat(self.som_te.window_data[i, :, :], centroid1)
+                    dist2 = self.dist_mat(self.som_te.window_data[i, :, :], centroid2)
+                    if dist1 <= dist2:
+                        # cluster[self.som_grid.net.shape[0] + i] = 0
+                        cluster[i] = 0
+                    else:
+                        # cluster[self.som_grid.net.shape[0] + i] = 1
+                        cluster[i] = 1
+            som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
+            som_anomaly[cluster == 0] = True
         if som_anomaly is None:
             som_anomaly = dist_anomaly > anomaly_threshold
         self.window_anomaly[som_anomaly] = self.label[0]
@@ -123,6 +149,22 @@ class SomDetect:
         :return: every distance between normal som matrix and weight matrix
         """
         return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in range(self.som_grid.net.shape[0])])
+
+    def dist_mat(self, mat1, mat2):
+        """
+        :param mat1: Matrix
+        :param mat2: Matrix
+        :return: distance between mat1 and mat2
+        """
+        if self.som_grid.dist_func == "frobenius":
+            return np.linalg.norm(mat1 - mat2, "fro")
+        elif self.som_grid.dist_func == "nuclear":
+            return np.linalg.norm(mat1 - mat2, "nuc")
+        elif self.som_grid.dist_func == "mahalanobis":
+            x = mat1 - mat2
+            covmat = np.cov(x.T)
+            ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            return np.sqrt(np.trace(ss))
 
     def inverse_som(self):
         """
@@ -166,15 +208,24 @@ class SomDetect:
         :return: heatmap of projection onto normal SOM
         """
         xdim = self.som_grid.net_dim[0]
-        ydim = self.som_grid.net_dim[1]
-        neuron_grid = np.empty((xdim, ydim))
-        node_id = 0
-        for j in range(ydim):
-            for i in range(xdim):
-                neuron_grid[i, j] = (self.project == node_id).sum()
-                node_id += 1
+        # ydim = self.som_grid.net_dim[1]
+        # neuron_grid = np.empty((ydim, xdim))
+        # node_id = 0
+        # for j in range(ydim):
+        #     for i in range(xdim):
+        #         neuron_grid[i, j] = (self.project == node_id).sum()
+        #         node_id += 1
+        # fig = go.Figure(
+        #     data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+        # )
+        x = self.project % xdim
+        y = self.project // xdim
         fig = go.Figure(
-            data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
+            go.Histogram2d(
+                x = x,
+                y = y,
+                colorscale="Viridis"
+            )
         )
         fig.show()
 
@@ -231,12 +282,15 @@ def main(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt == "-h" or opt == "--help":
-            message = """-h or --help: help
+            message = """Arguments:
+            -h or --help: help
+File path:
             -n: Normal data set file
             -o: Online data set file
-            -c: first and the last column indices to read, e.g. 1, 5
+            -c: first and the last column indices to read, e.g. 1,5 --> usecols=range(1,5)
                 Default = None
             -p: Output file
+Training SOM:
             -w: window size
                 Default = 60
             -j: shift size
@@ -261,16 +315,15 @@ def main(argv):
                 Default = 0.5
             -r: initial radius of BMU neighborhood
                 Default = 2/3 quantile of every distance between nodes
+Detecting anomalies:
             -l: anomaly and normal label
                 Default = 1,0
             -m: threshold method - quantile, radius, mean, or inv_som
                 Default = mean
+Plot if specified:
             -1: plot reconstruction error path
-                Default = do not plot
             -2: plot heatmap of SOM
-                Default = do not plot
             -3: plot heatmap of projection onto normal SOM
-                Default = do not plot
             """
             print(message)
             sys.exit()
