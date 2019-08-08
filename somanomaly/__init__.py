@@ -81,6 +81,10 @@ class kohonen:
         self.time_constant = None
         # find_bmu()
         self.bmu = None
+        # plot
+        self.reconstruction_error = None
+        self.dist_normal = None
+        self.project = None
 
     def init_weight(self):
         self.net = np.random.rand(self.net_dim[0] * self.net_dim[1], self.nrow, self.ncol)
@@ -158,9 +162,9 @@ class kohonen:
                     (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
         self.reconstruction_error = pd.DataFrame({"Epoch": np.arange(self.epoch) + 1, "Reconstruction Error": rcst_err})
         # Map to SOM = BMU
-        normal_distance = np.asarray([self.dist_weight(data, i) for i in tqdm(range(data.shape[0]), desc = "mapping")])
-        self.dist_normal = normal_distance[:, 0]
-        self.project = normal_distance[:, 1]
+        # normal_distance = np.asarray([self.dist_weight(data, i) for i in tqdm(range(data.shape[0]), desc = "mapping")])
+        # self.dist_normal = normal_distance[:, 0]
+        # self.project = normal_distance[:, 1]
 
     def find_bmu(self, data, index):
         """
@@ -247,15 +251,12 @@ class kohonen:
         """
         :return: Heatmap for SOM
         """
-        # neuron_grid = np.empty((self.net_dim[1], self.net_dim[0]))
-        # node_id = 0
-        # for j in range(self.net_dim[1]):
-        #     for i in range(self.net_dim[0]):
-        #         neuron_grid[i, j] = (self.project == node_id).sum()
-        #         node_id += 1
-        # fig = go.Figure(
-        #     data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
-        # )
+        if self.project is None:
+            normal_distance = np.asarray(
+                [self.dist_weight(data, i) for i in tqdm(range(data.shape[0]), desc="mapping")]
+            )
+            self.dist_normal = normal_distance[:, 0]
+            self.project = normal_distance[:, 1]
         x = self.project % self.net_dim[0]
         y = self.project // self.net_dim[0]
         fig = go.Figure(

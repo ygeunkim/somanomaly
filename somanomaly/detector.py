@@ -55,7 +55,8 @@ class SomDetect:
         self.d = dist
         self.decay = decay
         # plot
-        self.project = np.empty(self.som_te.window_data.shape[0])
+        # self.project = np.empty(self.som_te.window_data.shape[0])
+        self.project = None
 
     def learn_normal(self, epoch = 100, init_rate = None, init_radius = None):
         """
@@ -76,36 +77,48 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        som_dist_calc = np.asarray([self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc = "mapping online set")])
-        dist_anomaly = som_dist_calc[:, 0]
-        self.project = som_dist_calc[:, 1]
         thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans"]
-        som_anomaly = None
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        anomaly_threshold = None
-        if threshold == "quantile":
-            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
-            # threshold = np.quantile(dist_normal, 2 / 3)
-            anomaly_threshold = np.quantile(self.som_grid.dist_normal, 2/3)
-        elif threshold == "mean":
-            # dist_normal = np.asarray([self.dist_normal(i) for i in range(self.som_tr.window_data.shape[0])])
-            # threshold = np.mean(dist_normal)
-            anomaly_threshold = np.mean(self.som_grid.dist_normal)
-        elif threshold == "radius":
-            anomaly_threshold = self.som_grid.initial_r
-            normal_project = np.unique(self.som_grid.project)
-            from_normal = self.som_grid.dci[normal_project.astype(int), :]
-            anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
-            for i in tqdm(range(normal_project.shape[0]), desc = "neighboring"):
-                anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
-            anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
-            som_anomaly = np.isin(self.project, anomaly_node)
-        elif threshold == "inv_som":
+        som_anomaly = None
+        # threshold with mapping
+        if threshold == "quantile" or threshold == "mean" or threshold == "radius":
+            anomaly_threshold = None
+            dist_anomaly = None
+            # normal data
+            if self.som_grid.project is None:
+                normal_distance = np.asarray(
+                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc="mapping")]
+                )
+                self.som_grid.dist_normal = normal_distance[:, 0]
+                self.som_grid.project = normal_distance[:, 1]
+            # online data
+            if self.project is None:
+                som_dist_calc = np.asarray(
+                    [self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping online set")]
+                )
+                dist_anomaly = som_dist_calc[:, 0]
+                self.project = som_dist_calc[:, 1]
+            # thresholding
+            if threshold == "quantile":
+                anomaly_threshold = np.quantile(self.som_grid.dist_normal, 2/3)
+                som_anomaly = dist_anomaly > anomaly_threshold
+            elif threshold == "mean":
+                anomaly_threshold = np.mean(self.som_grid.dist_normal)
+                som_anomaly = dist_anomaly > anomaly_threshold
+            elif threshold == "radius":
+                anomaly_threshold = self.som_grid.initial_r
+                normal_project = np.unique(self.som_grid.project)
+                from_normal = self.som_grid.dci[normal_project.astype(int), :]
+                anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
+                for i in tqdm(range(normal_project.shape[0]), desc = "neighboring"):
+                    anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
+                anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
+                som_anomaly = np.isin(self.project, anomaly_node)
+        # threshold without mapping
+        if threshold == "inv_som":
             som_anomaly = self.inverse_som()
         elif threshold == "kmeans":
-            # cluster = np.zeros(self.som_grid.net.shape[0] + self.som_te.window_data.shape[0])
-            # cluster[self.som_grid.net.shape[0]:] = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
             cluster = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
             cluster_change = cluster + 1
             centroid1 = np.empty((self.som_grid.net.shape[1], self.som_grid.net.shape[2]))
@@ -122,15 +135,12 @@ class SomDetect:
                     dist1 = self.dist_mat(self.som_te.window_data[i, :, :], centroid1)
                     dist2 = self.dist_mat(self.som_te.window_data[i, :, :], centroid2)
                     if dist1 <= dist2:
-                        # cluster[self.som_grid.net.shape[0] + i] = 0
                         cluster[i] = 0
                     else:
-                        # cluster[self.som_grid.net.shape[0] + i] = 1
                         cluster[i] = 1
             som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
             som_anomaly[cluster == 0] = True
-        if som_anomaly is None:
-            som_anomaly = dist_anomaly > anomaly_threshold
+        # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 
@@ -189,6 +199,11 @@ class SomDetect:
             data = self.som_grid.net, epoch = self.som_grid.epoch,
             init_rate = self.som_grid.initial_learn, init_radius = self.som_grid.initial_r
         )
+        if online_kohonen.project is None:
+            online_distance = np.asarray(
+                [online_kohonen.dist_weight(self.som_te.window_data, i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping")]
+            )
+            online_kohonen.project = online_distance[:, 1]
         som_map = np.arange(n)
         return np.isin(som_map, online_kohonen.project, invert = True)
 
@@ -207,17 +222,12 @@ class SomDetect:
         """
         :return: heatmap of projection onto normal SOM
         """
+        if self.project is None:
+            som_dist_calc = np.asarray(
+                [self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping online set")]
+            )
+            self.project = som_dist_calc[:, 1]
         xdim = self.som_grid.net_dim[0]
-        # ydim = self.som_grid.net_dim[1]
-        # neuron_grid = np.empty((ydim, xdim))
-        # node_id = 0
-        # for j in range(ydim):
-        #     for i in range(xdim):
-        #         neuron_grid[i, j] = (self.project == node_id).sum()
-        #         node_id += 1
-        # fig = go.Figure(
-        #     data = go.Heatmap(z = neuron_grid, colorscale = "Viridis")
-        # )
         x = self.project % xdim
         y = self.project // xdim
         fig = go.Figure(
