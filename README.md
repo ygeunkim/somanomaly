@@ -83,7 +83,7 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - mean (default), 0.75 quantile, radius, or inv_som
+-m  Threshold method - mean (default), 0.75 quantile, radius, inv_som, or kmeans
 ```
 
 #### Plot

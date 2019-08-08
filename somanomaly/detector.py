@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import getopt
 import plotly.graph_objs as go
+from scipy.spatial import distance
 from tqdm import tqdm
 from somanomaly import kohonen
 from somanomaly.window import SomData
@@ -77,7 +78,7 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
@@ -140,6 +141,10 @@ class SomDetect:
                         cluster[i] = 1
             som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
             som_anomaly[cluster == 0] = True
+        elif threshold == "hclust":
+            self.init_sl()
+            merge = np.argwhere(self.single_linkage == np.min(self.single_linkage) and self.single_linkage != 0)
+            merge = merge[merge[:, 0] < merge[:, 1]]
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -206,6 +211,21 @@ class SomDetect:
             online_kohonen.project = online_distance[:, 1]
         som_map = np.arange(n)
         return np.isin(som_map, online_kohonen.project, invert = True)
+
+    def init_sl(self):
+        """
+        :return: single linkage between two clusters
+        """
+        dim1 = self.som_grid.net.shape[0]
+        dim2 = self.som_te.window_data.shape[0]
+        wt_dist = np.empty(dim2)
+        for i in range(dim2):
+            wt_dist[i] = np.min([self.dist_mat(self.som_grid[j, :, :], self.som_te.window_data) for j in range(dim1)])
+        data_dist = distance.pdist(self.som_te.window_data, self.dist_mat)
+        dist_mat = np.append(wt_dist[range(1, dim2)], data_dist).reshape((1 + dim2, dim2))
+        self.single_linkage = np.empty((1 + dim2, 1 + dim2))
+        self.single_linkage[0, :] = wt_dist
+        self.single_linkage[range(1, 1 + dim2), :] = dist_mat
 
     def label_anomaly(self):
         win_size = self.som_te.window_data.shape[1]
@@ -298,9 +318,9 @@ File path:
             -n: Normal data set file
             -o: Online data set file
             -c: first and the last column indices to read, e.g. 1,5 --> usecols=range(1,5)
-                Default = None
+                Default = None (every column)
             -p: Output file
-Training SOM:
+Training SOM (option):
             -w: window size
                 Default = 60
             -j: shift size
@@ -325,10 +345,10 @@ Training SOM:
                 Default = 0.5
             -r: initial radius of BMU neighborhood
                 Default = 2/3 quantile of every distance between nodes
-Detecting anomalies:
+Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, or inv_som
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans
                 Default = mean
 Plot if specified:
             -1: plot reconstruction error path
