@@ -83,7 +83,7 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - mean (default), 0.75 quantile, radius, inv_som, or kmeans
+-m  Threshold method - mean (default), 0.75 quantile, radius, inv_som, kmeans, or hclust
 ```
 
 #### Plot
@@ -157,3 +157,8 @@ Perform 2-means clustering for codebook matrices and online data-set.
     1. For each cluster, compute centroid.
     2. Compute distance between centroid and every online matrix.
     3. Assign each online observation matrix to the group with smaller distance.
+
+#### Divisive hierarchical clustering
+
+Perform divisive hierarchical clustering for codebook matrices and online data-set.
+Treat codebook matrices as one group at the beginning, and use average linkage.

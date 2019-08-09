@@ -142,9 +142,7 @@ class SomDetect:
             som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
             som_anomaly[cluster == 0] = True
         elif threshold == "hclust":
-            self.init_sl()
-            merge = np.argwhere(self.single_linkage == np.min(self.single_linkage) and self.single_linkage != 0)
-            merge = merge[merge[:, 0] < merge[:, 1]]
+            som_anomaly = self.hclust_divisive()
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -212,20 +210,54 @@ class SomDetect:
         som_map = np.arange(n)
         return np.isin(som_map, online_kohonen.project, invert = True)
 
-    def init_sl(self):
+    def hclust_divisive(self):
         """
-        :return: single linkage between two clusters
+        :return: divisive hierarchical clustering
         """
         dim1 = self.som_grid.net.shape[0]
         dim2 = self.som_te.window_data.shape[0]
+        # distances between codebook cluster and online observations
         wt_dist = np.empty(dim2)
-        for i in range(dim2):
-            wt_dist[i] = np.min([self.dist_mat(self.som_grid[j, :, :], self.som_te.window_data) for j in range(dim1)])
-        data_dist = distance.pdist(self.som_te.window_data, self.dist_mat)
-        dist_mat = np.append(wt_dist[range(1, dim2)], data_dist).reshape((1 + dim2, dim2))
-        self.single_linkage = np.empty((1 + dim2, 1 + dim2))
-        self.single_linkage[0, :] = wt_dist
-        self.single_linkage[range(1, 1 + dim2), :] = dist_mat
+        for i in tqdm(range(dim2), desc = "codebook vs online"):
+            wt_dist[i] = np.average([self.dist_mat(self.som_grid.net[j, :, :], self.som_te.window_data[i, :, :]) for j in range(dim1)])
+        # distance matrix among online observations
+        online_pair = np.array(
+            np.meshgrid(
+                np.arange(dim2),
+                np.arange(dim2)
+            )
+        ).reshape((2, dim2 * dim2)).T
+        to_fill = online_pair[online_pair[:, 0] < online_pair[:, 1]]
+        data_dist = np.zeros((dim2, dim2))
+        for i in tqdm(range(to_fill.shape[0]), desc = "online distance"):
+            data_dist[to_fill[i, 0], to_fill[i, 1]] = self.dist_mat(
+                self.som_te.window_data[to_fill[i, 0], :, :],
+                self.som_te.window_data[to_fill[i, 1], :, :]
+            )
+        data_dist = data_dist + data_dist.T
+        # append first column and row as codebook cluster
+        ave_linkage = np.empty((1 + dim2, 1 + dim2))
+        ave_linkage[:, range(1, 1 + dim2)] = np.append(wt_dist, data_dist).reshape((1 + dim2, dim2))
+        ave_linkage[:, 0] = np.append(0, wt_dist)
+        # choose h cluster
+        h_cluster = np.argmax(
+            ave_linkage.mean(axis=1)
+        )
+        # send to cluster h until ave_dist from h > ave_dist from g
+        h_diff = 1
+        while h_diff >= 0:
+            if h_cluster.ndim == 0:
+                test = ave_linkage[:, h_cluster.astype(int)] - np.delete(ave_linkage, h_cluster, axis = 1).mean(axis = 1)
+            else:
+                test = ave_linkage[:, h_cluster.astype(int)].mean(axis = 1) - np.delete(ave_linkage, h_cluster, axis = 1).mean(axis = 1)
+            h_diff = np.max(test)
+            h_cluster = np.append(h_cluster, np.argmax(test))
+        h_cluster = h_cluster[:-1]
+        g_cluster = np.arange(ave_linkage.shape[0])
+        divisive = np.isin(g_cluster, h_cluster)
+        if not divisive[0]:
+            divisive = np.invert(divisive)
+        return np.delete(divisive, 0)
 
     def label_anomaly(self):
         win_size = self.som_te.window_data.shape[1]
@@ -348,7 +380,7 @@ Training SOM (option):
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans, or hclust
                 Default = mean
 Plot if specified:
             -1: plot reconstruction error path

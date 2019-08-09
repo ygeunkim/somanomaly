@@ -3,7 +3,7 @@ import numpy as np
 from somanomaly.detector import SomDetect
 
 
-def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid = 20):
+def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid = 20, plot = True):
     """
     :param path_normal: normal data set
     :param path_on: online data set
@@ -19,8 +19,8 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     print("normal data set: ", som_anomaly.som_tr.window_data.shape)
     print("online data set: ", som_anomaly.som_te.window_data.shape)
     print("------------------------------")
-    som_anomaly.learn_normal(100)
-    som_anomaly.detect_anomaly(label = [1, 0], threshold = "kmeans")
+    som_anomaly.learn_normal(50)
+    som_anomaly.detect_anomaly(label = [1, 0], threshold = "hclust")
     count = np.unique(som_anomaly.window_anomaly, return_counts = True)
     print("=============================================================")
     print("window anomaly result: ", som_anomaly.window_anomaly)
@@ -32,13 +32,14 @@ def detect_example(path_normal, path_on, win = 60, jump = 50, xgrid = 20, ygrid 
     print("anomaly result: ", som_anomaly.anomaly)
     print("counts: ", ent_count)
     print("------------------------------")
-    som_anomaly.som_grid.plot_error()
-    som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
-    som_anomaly.plot_heatmap()
+    if plot:
+        som_anomaly.som_grid.plot_error()
+        som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
+        som_anomaly.plot_heatmap()
 
 
 np.set_printoptions(precision = 3)
 if __name__ == "__main__":
     path1 = sys.argv[1]
     path2 = sys.argv[2]
-    detect_example(path1, path2)
+    detect_example(path1, path2, plot = False)
