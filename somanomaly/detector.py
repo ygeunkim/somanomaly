@@ -4,6 +4,8 @@ import sys
 import getopt
 import plotly.graph_objs as go
 from scipy.spatial import distance
+from scipy.stats import chi2
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from somanomaly import kohonen
 from somanomaly.window import SomData
@@ -78,7 +80,7 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
@@ -143,6 +145,14 @@ class SomDetect:
             som_anomaly[cluster == 0] = True
         elif threshold == "hclust":
             som_anomaly = self.hclust_divisive()
+        elif threshold == "ztest":
+            net_stand = self.som_grid.net.reshape((-1, self.som_tr.window_data.shape[2]))
+            scaler = StandardScaler()
+            net_stand = scaler.fit_transform(net_stand).reshape(self.som_grid.net.shape)
+            dist_anomaly = np.asarray(
+                [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
+            )
+            som_anomaly = dist_anomaly > chi2.ppf(.95, self.som_te.window_data.shape[1])
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -155,6 +165,18 @@ class SomDetect:
         # normal_map = np.unique(self.som_grid.project)
         dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.som_grid.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
+
+    def dist_codebook(self, codebook, index):
+        """
+        :param codebook: transformed codebook matrices
+        :param index: Row index for online data set
+        :return: average distance between online data set and weight matrix
+        """
+        net_num = codebook.shape[0]
+        dist_wt = np.asarray(
+            [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
+        )
+        return np.average(dist_wt)
 
     def dist_normal(self, index):
         """
@@ -175,8 +197,12 @@ class SomDetect:
             return np.linalg.norm(mat1 - mat2, "nuc")
         elif self.som_grid.dist_func == "mahalanobis":
             x = mat1 - mat2
-            covmat = np.cov(x.T)
-            ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            covmat = np.cov(x, rowvar = False)
+            # ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            w, v = np.linalg.eigh(covmat)
+            w[w == 0] += .0001
+            covinv = v.dot(np.diag(1 / w)).dot(v.T)
+            ss = x.dot(covinv).dot(x.T)
             return np.sqrt(np.trace(ss))
 
     def inverse_som(self):
@@ -378,7 +404,7 @@ Training SOM (option):
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans, or hclust
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, or ztest
                 Default = mean
 Plot if specified:
             -1: plot reconstruction error path

@@ -187,8 +187,14 @@ class kohonen:
             return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "nuc")
         elif self.dist_func == "mahalanobis":
             x = data[index, :, :] - self.net[node, :, :]
-            covmat = np.cov(x.T)
-            ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            covmat = np.cov(x, rowvar = False)
+            # ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
+            # spectral decomposition sigma = udu.T
+            w, v = np.linalg.eigh(covmat)
+            # inverse = ud^-1u.T
+            w[w == 0] += .0001
+            covinv = v.dot(np.diag(1 / w)).dot(v.T)
+            ss = x.dot(covinv).dot(x.T)
             return np.sqrt(np.trace(ss))
 
     def dist_node(self):
