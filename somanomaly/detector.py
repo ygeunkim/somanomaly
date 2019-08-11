@@ -3,10 +3,10 @@ import pandas as pd
 import sys
 import getopt
 import plotly.graph_objs as go
-from scipy.spatial import distance
 from scipy.stats import chi2
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
+from sklearn.metrics import classification_report
 from somanomaly import kohonen
 from somanomaly.window import SomData
 
@@ -113,7 +113,11 @@ class SomDetect:
                 anomaly_threshold = self.som_grid.initial_r
                 normal_project = np.unique(self.som_grid.project)
                 from_normal = self.som_grid.dci[normal_project.astype(int), :]
-                anomaly_project = np.full((normal_project.shape[0], self.som_grid.net.shape[0]), fill_value = False, dtype = bool)
+                anomaly_project = np.full(
+                    (normal_project.shape[0], self.som_grid.net.shape[0]),
+                    fill_value = False,
+                    dtype = bool
+                )
                 for i in tqdm(range(normal_project.shape[0]), desc = "neighboring"):
                     anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
                 anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
@@ -337,14 +341,19 @@ def main(argv):
     # detection arguments
     label = [1, 0]
     threshold = "mean"
+    # print_eval
+    print_eval = False
+    target_names = ["anomaly", "normal"]
+    true_file = None
     # plot options
     print_error = False
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:w:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:z:w:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
+                                    "True label file",
                                     "Window size=(default:60)", "Jump size=(default:60)",
                                     "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
@@ -357,7 +366,8 @@ def main(argv):
                                     "Plot heatmap of projection onto normal SOM"])
     except getopt.GetoptError as err:
         print(err)
-        usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
+        usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
+                                                    -p <output_file> {-z} <true_file>
                                                     {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
                                                     {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay> 
                                                     {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
@@ -376,6 +386,7 @@ File path:
             -c: first and the last column indices to read, e.g. 1,5 --> usecols=range(1,5)
                 Default = None (every column)
             -p: Output file
+            -z: True label file (optional - if provided, print evaluation)
 Training SOM (option):
             -w: window size
                 Default = 60
@@ -422,6 +433,9 @@ Plot if specified:
         elif opt in ("-c"):
             cols = str(arg).strip().split(',')
             cols = range(int(cols[0]), int(cols[1]))
+        elif opt in ("-z"):
+            print_eval = True
+            true_file = arg
         elif opt in ("-w"):
             window_size = int(arg)
         elif opt in ("-j"):
@@ -465,6 +479,16 @@ Plot if specified:
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
+    # evaluation
+    if print_eval:
+        true_anomaly = pd.read_csv(true_file, header = None)
+        true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
+        print(
+            classification_report(
+                true_anomaly, som_anomaly.anomaly,
+                labels = label, target_names = target_names
+            )
+        )
     # plot
     if print_error:
         som_anomaly.som_grid.plot_error()

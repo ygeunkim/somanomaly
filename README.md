@@ -57,6 +57,14 @@ Then the columns from `start + 1` to `end` in the file will be read.
 
 This file does not have any column header or row index.
 
+#### True value
+
+```
+-z  True label file
+```
+
+If this file is provided, evaluation result (precision, recall, and F1-score) will be printed.
+
 ### SOM
 
 Options for training and detection have default values, respectively.
