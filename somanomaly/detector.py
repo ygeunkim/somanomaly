@@ -266,9 +266,7 @@ class SomDetect:
         self.anomaly = np.repeat(self.label[1], self.anomaly.shape[0])
         for i in tqdm(range(self.window_anomaly.shape[0]), desc = "anomaly unit change"):
             if self.window_anomaly[i] == self.label[0]:
-                for j in tqdm(range(i * jump_size, i * jump_size + win_size), desc = "observation unit"):
-                    if self.anomaly[j] != self.label[0]:
-                        self.anomaly[j] = self.label[0]
+                self.anomaly[(i * jump_size):(i * jump_size + win_size)] = self.label[0]
 
     def plot_heatmap(self):
         """
@@ -439,7 +437,7 @@ Plot if specified:
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
     som_anomaly.detect_anomaly(label = label, threshold = threshold)
     som_anomaly.label_anomaly()
-    anomaly_df = pd.DataFrame(som_anomaly.anomaly)
+    anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
     # plot
     if print_error:
