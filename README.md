@@ -131,6 +131,16 @@ The algorithm requires computing *distance between matrices* - input matrix and 
     <img width="70%" height="43.26%" src="docs/som_detect.png">
 </p>
 
+#### Threshold by statistical distribution quantiles
+
+1. Standardize every weight (codebook) matrix w.r.t. variable.
+2. Compute each distance between codebook matrix.
+3. If the average is larger than .90 chi-squared quantile, the window is detected as anomaly.
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/ztest_detect.png">
+</p>
+
 #### Threshold by distances between nodes
 
 1. Project online data-set onto normal SOM.

@@ -152,7 +152,7 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            som_anomaly = dist_anomaly > chi2.ppf(.95, self.som_te.window_data.shape[1])
+            som_anomaly = dist_anomaly > chi2.ppf(.9, self.som_te.window_data.shape[1])
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
