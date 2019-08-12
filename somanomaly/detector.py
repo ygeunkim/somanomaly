@@ -343,21 +343,21 @@ def main(argv):
     cols = None
     # training arguments
     standard = False
-    window_size = 60
-    jump_size = 60
-    xdim = 20
-    ydim = 20
+    window_size = 30
+    jump_size = 30
+    xdim = 50
+    ydim = 50
     topo = "rectangular"
     neighbor = "gaussian"
     dist = "frobenius"
     decay = "exponential"
     seed = None
-    epoch = 100
+    epoch = 50
     init_rate = None
     init_radius = None
     # detection arguments
     label = [1, 0]
-    threshold = "mean"
+    threshold = "ztest"
     # print_eval
     print_eval = False
     target_names = ["anomaly", "normal"]
@@ -372,12 +372,12 @@ def main(argv):
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "True label file",
                                     "Standardize",
-                                    "Window size=(default:60)", "Jump size=(default:60)",
-                                    "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
+                                    "Window size=(default:30)", "Jump size=(default:30)",
+                                    "x-grid=(default:50)", "y-grid=(default:50)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
                                     "Decay=(default:exponential)",
-                                    "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:mean)",
-                                    "Epoch number=(default:100)",
+                                    "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
+                                    "Epoch number=(default:50)",
                                     "Initial learning rate=(default:0.5)", "Initial radius=(default:function)",
                                     "Plot reconstruction error",
                                     "Plot heatmap for SOM",
@@ -408,13 +408,13 @@ File path:
 Training SOM (option):
             -i: standardize data if specified
             -w: window size
-                Default = 60
+                Default = 30
             -j: shift size
-                Default = 60
+                Default = 30
             -x: number of x-grid
-                Default = 20
+                Default = 50
             -y: number of y-grid
-                Default = 20
+                Default = 50
             -t: topology of SOM output space - rectangular or hexagonal
                 Default = rectangular
             -f: neighborhood function - gaussian or bubble
@@ -426,7 +426,7 @@ Training SOM (option):
             -s: random seed
                 Default = current system time
             -e: epoch number
-                Default = 100
+                Default = 50
             -a: initial learning ratio
                 Default = 0.5
             -r: initial radius of BMU neighborhood
@@ -435,7 +435,7 @@ Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
             -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, or ztest
-                Default = mean
+                Default = ztest
 Plot if specified:
             -1: plot reconstruction error path
             -2: plot heatmap of SOM

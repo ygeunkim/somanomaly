@@ -67,23 +67,27 @@ If this file is provided, evaluation result (precision, recall, and F1-score) wi
 
 ### SOM
 
+```
+-i  Standardize both data sets if specified
+```
+
 Options for training and detection have default values, respectively.
 So all these are optional arguments.
 
 #### Training SOM
 
 ```
--w  Window size (Default = 60)
--j  Shift size (Default = 60)
--x  Number of x-grid (Default = 20)
--y  Number of y-grid (Default = 20)
+-w  Window size (Default = 30)
+-j  Shift size (Default = 30)
+-x  Number of x-grid (Default = 50)
+-y  Number of y-grid (Default = 50)
 -t  Topology of SOM output space - rectangular (default) or hexagonal
 -f  Neighborhood function - gaussian (default) or bubble
 -d  Distance function - frobenius (default), nuclear, or mahalanobis
 -g  Decaying function - exponential (default) or linear
 -s  Random seed (Default = system time)
--e  Epoch number (Default = 100)
--a  Initial learning rate (Default = 0.05)
+-e  Epoch number (Default = 50)
+-a  Initial learning rate (Default = 0.5)
 -r  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
 ```
 
@@ -91,7 +95,7 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - mean (default), 0.75 quantile, radius, inv_som, kmeans, hclust, or ztest
+-m  Threshold method - ztest (default), mean, quantile, radius, inv_som, kmeans, or hclust
 ```
 
 #### Plot
