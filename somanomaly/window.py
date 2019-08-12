@@ -32,7 +32,6 @@ class SomData:
         """
         :param path: data path
         :param cols: column index to read
-        :param standardization: standardize the data?
         :return: numpy converted from pandas
         """
         if cols is None:

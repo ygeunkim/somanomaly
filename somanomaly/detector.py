@@ -165,8 +165,9 @@ class SomDetect:
             som_anomaly = self.hclust_divisive()
         elif threshold == "ztest":
             net_stand = self.som_grid.net
+            # standardize codebook otherwise input standardized
             if not self.standard:
-                net_stand = self.som_grid.net.reshape((-1, self.som_tr.window_data.shape[2]))
+                net_stand = self.som_grid.net.reshape((-1, self.som_grid.net.shape[2]))
                 scaler = StandardScaler()
                 net_stand = scaler.fit_transform(net_stand).reshape(self.som_grid.net.shape)
             dist_anomaly = np.asarray(
@@ -182,7 +183,6 @@ class SomDetect:
         :param index: Row index for online data set
         :return: minimum distance between online data set and weight matrix
         """
-        # normal_map = np.unique(self.som_grid.project)
         dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.som_grid.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
 

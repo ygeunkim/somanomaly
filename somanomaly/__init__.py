@@ -161,10 +161,6 @@ class kohonen:
                     self.alpha * hci * \
                     (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
         self.reconstruction_error = pd.DataFrame({"Epoch": np.arange(self.epoch) + 1, "Reconstruction Error": rcst_err})
-        # Map to SOM = BMU
-        # normal_distance = np.asarray([self.dist_weight(data, i) for i in tqdm(range(data.shape[0]), desc = "mapping")])
-        # self.dist_normal = normal_distance[:, 0]
-        # self.project = normal_distance[:, 1]
 
     def find_bmu(self, data, index):
         """
