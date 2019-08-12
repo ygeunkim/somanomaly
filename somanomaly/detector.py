@@ -27,7 +27,8 @@ class SomDetect:
     """
 
     def __init__(
-            self, path_normal, path_online, cols = None, window_size = 60, jump_size = 60,
+            self, path_normal, path_online, cols = None, standard = False,
+            window_size = 60, jump_size = 60,
             xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian",
             dist = "frobenius", decay = "exponential", seed = None
     ):
@@ -35,6 +36,7 @@ class SomDetect:
         :param path_normal: file path of normal data set
         :param path_online: file path of online data set
         :param cols: column index to read
+        :param standard: standardize both data sets
         :param window_size: window size
         :param jump_size: shift size
         :param xdim: Number of x-grid
@@ -48,6 +50,18 @@ class SomDetect:
         self.som_tr = SomData(path_normal, cols, window_size, jump_size)
         self.som_te = SomData(path_online, cols, window_size, jump_size)
         self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
+        # standardization
+        self.standard = standard
+        if self.standard:
+            scaler = StandardScaler()
+            # standardize normal data-set
+            tmp_tr = self.som_tr.window_data.reshape((-1, self.som_tr.window_data.shape[2]))
+            tmp_tr = scaler.fit_transform(tmp_tr).reshape(self.som_tr.window_data.shape)
+            self.som_tr.window_data = tmp_tr
+            # standardize online data-set
+            tmp_te = self.som_te.window_data.reshape((-1, self.som_te.window_data.shape[2]))
+            tmp_te = scaler.fit_transform(tmp_te).reshape(self.som_te.window_data.shape)
+            self.som_te.window_data = tmp_te
         # anomaly
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
@@ -150,9 +164,11 @@ class SomDetect:
         elif threshold == "hclust":
             som_anomaly = self.hclust_divisive()
         elif threshold == "ztest":
-            net_stand = self.som_grid.net.reshape((-1, self.som_tr.window_data.shape[2]))
-            scaler = StandardScaler()
-            net_stand = scaler.fit_transform(net_stand).reshape(self.som_grid.net.shape)
+            net_stand = self.som_grid.net
+            if not self.standard:
+                net_stand = self.som_grid.net.reshape((-1, self.som_tr.window_data.shape[2]))
+                scaler = StandardScaler()
+                net_stand = scaler.fit_transform(net_stand).reshape(self.som_grid.net.shape)
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
@@ -326,6 +342,7 @@ def main(argv):
     output_file = ""
     cols = None
     # training arguments
+    standard = False
     window_size = 60
     jump_size = 60
     xdim = 20
@@ -350,10 +367,11 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:z:w:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "True label file",
+                                    "Standardize",
                                     "Window size=(default:60)", "Jump size=(default:60)",
                                     "x-grid=(default:20)", "y-grid=(default:20)", "topology=(default:rectangular)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
@@ -388,6 +406,7 @@ File path:
             -p: Output file
             -z: True label file (optional - if provided, print evaluation)
 Training SOM (option):
+            -i: standardize data if specified
             -w: window size
                 Default = 60
             -j: shift size
@@ -436,6 +455,8 @@ Plot if specified:
         elif opt in ("-z"):
             print_eval = True
             true_file = arg
+        elif opt in ("-i"):
+            standard = True
         elif opt in ("-w"):
             window_size = int(arg)
         elif opt in ("-j"):
@@ -471,7 +492,7 @@ Plot if specified:
             print_heat = True
         elif opt in ("-3"):
             print_projection = True
-    som_anomaly = SomDetect(normal_file, online_file, cols,
+    som_anomaly = SomDetect(normal_file, online_file, cols, standard,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
