@@ -347,7 +347,7 @@ def main(argv):
     jump_size = 30
     xdim = 50
     ydim = 50
-    topo = "rectangular"
+    topo = "hexagonal"
     neighbor = "gaussian"
     dist = "frobenius"
     decay = "exponential"
@@ -373,7 +373,7 @@ def main(argv):
                                     "True label file",
                                     "Standardize",
                                     "Window size=(default:30)", "Jump size=(default:30)",
-                                    "x-grid=(default:50)", "y-grid=(default:50)", "topology=(default:rectangular)",
+                                    "x-grid=(default:50)", "y-grid=(default:50)", "topology=(default:hexagonal)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
                                     "Decay=(default:exponential)",
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
@@ -416,7 +416,7 @@ Training SOM (option):
             -y: number of y-grid
                 Default = 50
             -t: topology of SOM output space - rectangular or hexagonal
-                Default = rectangular
+                Default = hexagonal
             -f: neighborhood function - gaussian or bubble
                 Default = gaussian
             -d: distance function - frobenius, nuclear, or mahalanobis

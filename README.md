@@ -81,7 +81,7 @@ So all these are optional arguments.
 -j  Shift size (Default = 30)
 -x  Number of x-grid (Default = 50)
 -y  Number of y-grid (Default = 50)
--t  Topology of SOM output space - rectangular (default) or hexagonal
+-t  Topology of SOM output space - hexagonal (default) or rectangular
 -f  Neighborhood function - gaussian (default) or bubble
 -d  Distance function - frobenius (default), nuclear, or mahalanobis
 -g  Decaying function - exponential (default) or linear
