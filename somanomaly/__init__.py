@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 from scipy.spatial import distance
+from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
 
 
@@ -63,7 +64,7 @@ class kohonen:
             raise ValueError("Invalid neighbor. Expected one of: %s" % neighbor_types)
         self.neighbor_func = neighbor
         # Distance function
-        dist_type = ["frobenius", "nuclear", "mahalanobis"]
+        dist_type = ["frobenius", "nuclear", "mahalanobis", "eros"]
         if dist not in dist_type:
             raise ValueError("Invalid dist. Expected one of: %s" % dist_type)
         self.dist_func = dist
@@ -191,6 +192,17 @@ class kohonen:
             w[w == 0] += .0001
             covinv = v.dot(np.diag(1 / w)).dot(v.T)
             ss = x.dot(covinv).dot(x.T)
+            return np.sqrt(np.trace(ss))
+        elif self.dist_func == "eros":
+            x = data[index, :, :] - self.net[node, :, :]
+            covmat = np.cov(x, rowvar = False)
+            # svd(covariance)
+            # u, s, vh = np.linalg.svd(covmat, full_matrices = False)
+            u, s, vh = randomized_svd(covmat, n_components = covmat.shape[1], n_iter = 1, random_state = None)
+            # normalize eigenvalue
+            w = s / s.sum()
+            # distance
+            ss = np.multiply(vh, w).dot(vh.T)
             return np.sqrt(np.trace(ss))
 
     def dist_node(self):

@@ -5,6 +5,7 @@ import getopt
 import plotly.graph_objs as go
 from scipy.stats import chi2
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
 from sklearn.metrics import classification_report
 from somanomaly import kohonen
@@ -224,6 +225,14 @@ class SomDetect:
             covinv = v.dot(np.diag(1 / w)).dot(v.T)
             ss = x.dot(covinv).dot(x.T)
             return np.sqrt(np.trace(ss))
+        elif self.som_grid.dist_func == "eros":
+            x = mat1 - mat2
+            covmat = np.cov(x, rowvar = False)
+            # u, s, vh = np.linalg.svd(covmat, full_matrices = False)
+            u, s, vh = randomized_svd(covmat, n_components = covmat.shape[1], n_iter = 1, random_state = None)
+            w = s / s.sum()
+            ss = np.multiply(vh, w).dot(vh.T)
+            return np.sqrt(np.trace(ss))
 
     def inverse_som(self):
         """
@@ -386,7 +395,7 @@ def main(argv):
         print(err)
         usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
                                                     -p <output_file> {-z} <true_file>
-                                                    {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
+                                                    {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
                                                     {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay> 
                                                     {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                                                     {-l} <label> {-m} <threshold>
@@ -419,7 +428,7 @@ Training SOM (option):
                 Default = hexagonal
             -f: neighborhood function - gaussian or bubble
                 Default = gaussian
-            -d: distance function - frobenius, nuclear, or mahalanobis
+            -d: distance function - frobenius, nuclear, mahalanobis, or eros
                 Default = frobenius
             -g: decaying function - exponential or linear
                 Default = exponential

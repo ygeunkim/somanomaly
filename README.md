@@ -1,8 +1,17 @@
 # <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
 
-**Online SOM Detector** - Anomaly detection using <span style="color:blue"> Self-Organizing Maps </span>
+**Online SOM Detector** - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
 ## Building
+
+This module requires the following.
+
+- Numpy: [https://www.numpy.org](https://www.numpy.org)
+- pandas: [https://pandas.pydata.org](https://pandas.pydata.org)
+- scipy: [https://www.scipy.org](https://www.scipy.org)
+- scikit-learn: [https://scikit-learn.org/stable/](https://scikit-learn.org/stable/)
+- plotly: [https://plot.ly/python/](https://plot.ly/python/)
+- tqdm: [https://tqdm.github.io](https://tqdm.github.io)
 
 ```
 git clone https://github.com/ygeunkim/somanomaly.git
@@ -13,12 +22,13 @@ python setup.py install
 
 ### Usage
 
-In terminal, you can run *Online SOM detector* using `somanomaly/detector.py`:
+In command line, you can run *Online SOM detector* using `somanomaly/detector.py`:
 
 ```
 cd somanomaly
-python detector.py -n <normal_file> -o <online_file> {-c} <column_range> -p <output_file>
-                        {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
+python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
+                        -p <output_file> {-z} <true_file>
+                        {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
                         {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay>
                         {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                         {-l} <label> {-m} <threshold>
@@ -83,7 +93,7 @@ So all these are optional arguments.
 -y  Number of y-grid (Default = 50)
 -t  Topology of SOM output space - hexagonal (default) or rectangular
 -f  Neighborhood function - gaussian (default) or bubble
--d  Distance function - frobenius (default), nuclear, or mahalanobis
+-d  Distance function - frobenius (default), nuclear, mahalanobis, or eros
 -g  Decaying function - exponential (default) or linear
 -s  Random seed (Default = system time)
 -e  Epoch number (Default = 50)
