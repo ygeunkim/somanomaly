@@ -95,12 +95,12 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
         # threshold with mapping
-        if threshold == "quantile" or threshold == "mean" or threshold == "radius":
+        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans":
             anomaly_threshold = None
             dist_anomaly = None
             # normal data
@@ -137,6 +137,30 @@ class SomDetect:
                     anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
                 anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
                 som_anomaly = np.isin(self.project, anomaly_node)
+            elif threshold == "unitkmeans":
+                normal_net = self.som_grid.net[self.som_grid.project, :, :]
+                online_net = self.som_grid.net[self.project, :, :]
+                cluster = np.random.choice(np.arange(2), online_net.shape[0])
+                cluster_change = cluster + 1
+                centroid1 = np.empty((normal_net.shape[1], normal_net.shape[2]))
+                centroid2 = centroid1
+                while not np.array_equal(cluster, cluster_change):
+                    normal_array = np.append(
+                        normal_net, online_net[cluster == 0, :, :], axis = 0
+                    )
+                    anom_array = online_net[cluster == 1, :, :]
+                    centroid1 = np.mean(normal_array, axis = 0)
+                    centroid2 = np.mean(anom_array, axis = 0)
+                    cluster_change = cluster
+                    for i in range(online_net.shape[0]):
+                        dist1 = self.dist_mat(online_net[i, :, :], centroid1)
+                        dist2 = self.dist_mat(online_net[i, :, :], centroid2)
+                        if dist1 <= dist2:
+                            cluster[i] = 0
+                        else:
+                            cluster[i] = 1
+                    som_anomaly = np.full(online_net.shape[0], fill_value = False, dtype = bool)
+                    som_anomaly[cluster == 0] = True
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -443,7 +467,7 @@ Training SOM (option):
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, or ztest
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, or unitkmeans
                 Default = ztest
 Plot if specified:
             -1: plot reconstruction error path
@@ -486,7 +510,7 @@ Plot if specified:
             seed = int(arg)
         elif opt in ("-l"):
             label = str(arg).strip().split(',')
-            label = range(int(label[0]), int(label[1]))
+            label = [int(label[0]), int(label[1])]
         elif opt in ("-m"):
             threshold = arg
         elif opt in ("-e"):
