@@ -105,7 +105,7 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - ztest (default), mean, quantile, radius, inv_som, kmeans, or hclust
+-m  Threshold method - ztest (default), mean, quantile, radius, inv_som, kmeans, hclust, unitkmeans
 ```
 
 #### Plot
@@ -163,16 +163,6 @@ The algorithm requires computing *distance between matrices* - input matrix and 
     <img width="70%" height="43.26%" src="docs/ztest_detect.png">
 </p>
 
-#### Threshold by distances between nodes
-
-1. Project online data-set onto normal SOM.
-2. Compute distance between projection and normal projection.
-3. If the online projection is *not in the neighborhood of normal projection*, the window is detected as anomaly.
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/radius_detect.png">
-</p>
-
 #### Inverse SOM
 
 1. Apply Online data set to codebook matrices
@@ -194,3 +184,13 @@ Perform 2-means clustering for codebook matrices and online data-set.
 
 Perform divisive hierarchical clustering for codebook matrices and online data-set.
 Treat codebook matrices as one group at the beginning, and use average linkage.
+
+#### Threshold by distances between nodes
+
+1. Project online data-set onto normal SOM.
+2. Compute distance between projection and normal projection.
+3. If the online projection is *not in the neighborhood of normal projection*, the window is detected as anomaly.
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/radius_detect.png">
+</p>

@@ -138,8 +138,8 @@ class SomDetect:
                 anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
                 som_anomaly = np.isin(self.project, anomaly_node)
             elif threshold == "unitkmeans":
-                normal_net = self.som_grid.net[self.som_grid.project, :, :]
-                online_net = self.som_grid.net[self.project, :, :]
+                normal_net = self.som_grid.net[self.som_grid.project.astype(int), :, :]
+                online_net = self.som_grid.net[self.project.astype(int), :, :]
                 cluster = np.random.choice(np.arange(2), online_net.shape[0])
                 cluster_change = cluster + 1
                 centroid1 = np.empty((normal_net.shape[1], normal_net.shape[2]))
