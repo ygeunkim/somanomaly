@@ -99,6 +99,7 @@ So all these are optional arguments.
 -e  Epoch number (Default = 50)
 -a  Initial learning rate (Default = 0.5)
 -r  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
+-k  Subset weight matrix set among epochs (Default = epoch number)
 ```
 
 #### Detecting anomaly

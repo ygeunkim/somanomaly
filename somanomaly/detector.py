@@ -76,13 +76,20 @@ class SomDetect:
         # self.project = np.empty(self.som_te.window_data.shape[0])
         self.project = None
 
-    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None):
+    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None, subset_net = 100):
         """
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
+        :param subset_net: choose specific weight matrix set among epochs
         """
-        self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius)
+        if epoch < subset_net:
+            raise ValueError("epoch should be same or larger than subset_net")
+        self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius, keep_net = epoch > subset_net)
+        if epoch == subset_net:
+            self.net = self.som_grid.net
+        else:
+            self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
 
     def detect_anomaly(self, label = None, threshold = "quantile"):
         """
@@ -129,7 +136,7 @@ class SomDetect:
                 normal_project = np.unique(self.som_grid.project)
                 from_normal = self.som_grid.dci[normal_project.astype(int), :]
                 anomaly_project = np.full(
-                    (normal_project.shape[0], self.som_grid.net.shape[0]),
+                    (normal_project.shape[0], self.net.shape[0]),
                     fill_value = False,
                     dtype = bool
                 )
@@ -138,8 +145,8 @@ class SomDetect:
                 anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
                 som_anomaly = np.isin(self.project, anomaly_node)
             elif threshold == "unitkmeans":
-                normal_net = self.som_grid.net[self.som_grid.project.astype(int), :, :]
-                online_net = self.som_grid.net[self.project.astype(int), :, :]
+                normal_net = self.net[self.som_grid.project.astype(int), :, :]
+                online_net = self.net[self.project.astype(int), :, :]
                 cluster = np.random.choice(np.arange(2), online_net.shape[0])
                 cluster_change = cluster + 1
                 centroid1 = np.empty((normal_net.shape[1], normal_net.shape[2]))
@@ -167,11 +174,11 @@ class SomDetect:
         elif threshold == "kmeans":
             cluster = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
             cluster_change = cluster + 1
-            centroid1 = np.empty((self.som_grid.net.shape[1], self.som_grid.net.shape[2]))
+            centroid1 = np.empty((self.net.shape[1], self.net.shape[2]))
             centroid2 = centroid1
             while not np.array_equal(cluster, cluster_change):
                 normal_array = np.append(
-                    self.som_grid.net, self.som_te.window_data[cluster == 0, :, :], axis = 0
+                    self.net, self.som_te.window_data[cluster == 0, :, :], axis = 0
                 )
                 anom_array = self.som_te.window_data[cluster == 1, :, :]
                 centroid1 = np.mean(normal_array, axis = 0)
@@ -189,12 +196,12 @@ class SomDetect:
         elif threshold == "hclust":
             som_anomaly = self.hclust_divisive()
         elif threshold == "ztest":
-            net_stand = self.som_grid.net
+            net_stand = self.net
             # standardize codebook otherwise input standardized
             if not self.standard:
-                net_stand = self.som_grid.net.reshape((-1, self.som_grid.net.shape[2]))
+                net_stand = self.net.reshape((-1, self.net.shape[2]))
                 scaler = StandardScaler()
-                net_stand = scaler.fit_transform(net_stand).reshape(self.som_grid.net.shape)
+                net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
@@ -208,7 +215,7 @@ class SomDetect:
         :param index: Row index for online data set
         :return: minimum distance between online data set and weight matrix
         """
-        dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.som_grid.net.shape[0]), desc = "bmu")])
+        dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
 
     def dist_codebook(self, codebook, index):
@@ -228,7 +235,7 @@ class SomDetect:
         :param index: Row index for normal data set
         :return: every distance between normal som matrix and weight matrix
         """
-        return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in range(self.som_grid.net.shape[0])])
+        return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in range(self.net.shape[0])])
 
     def dist_mat(self, mat1, mat2):
         """
@@ -273,12 +280,12 @@ class SomDetect:
                 xdim -= 1
                 ydim = n / xdim
         online_kohonen = kohonen(
-            data = self.som_grid.net, xdim = int(xdim), ydim = int(ydim), topo = self.topo,
+            data = self.net, xdim = int(xdim), ydim = int(ydim), topo = self.topo,
             neighbor = self.h, dist = self.d, decay = self.decay
         )
         online_kohonen.net = self.som_te.window_data
         online_kohonen.som(
-            data = self.som_grid.net, epoch = self.som_grid.epoch,
+            data = self.net, epoch = self.som_grid.epoch,
             init_rate = self.som_grid.initial_learn, init_radius = self.som_grid.initial_r
         )
         if online_kohonen.project is None:
@@ -293,12 +300,12 @@ class SomDetect:
         """
         :return: divisive hierarchical clustering
         """
-        dim1 = self.som_grid.net.shape[0]
+        dim1 = self.net.shape[0]
         dim2 = self.som_te.window_data.shape[0]
         # distances between codebook cluster and online observations
         wt_dist = np.empty(dim2)
         for i in tqdm(range(dim2), desc = "codebook vs online"):
-            wt_dist[i] = np.average([self.dist_mat(self.som_grid.net[j, :, :], self.som_te.window_data[i, :, :]) for j in range(dim1)])
+            wt_dist[i] = np.average([self.dist_mat(self.net[j, :, :], self.som_te.window_data[i, :, :]) for j in range(dim1)])
         # distance matrix among online observations
         online_pair = np.array(
             np.meshgrid(
@@ -356,7 +363,7 @@ class SomDetect:
                 [self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping online set")]
             )
             self.project = som_dist_calc[:, 1]
-        xdim = self.som_grid.net_dim[0]
+        xdim = self.net_dim[0]
         x = self.project % xdim
         y = self.project // xdim
         fig = go.Figure(
@@ -386,6 +393,7 @@ def main(argv):
     decay = "exponential"
     seed = None
     epoch = 50
+    subset_net = 50
     init_rate = None
     init_radius = None
     # detection arguments
@@ -400,7 +408,7 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:e:a:r:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:e:a:r:k:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "True label file",
@@ -412,6 +420,7 @@ def main(argv):
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
                                     "Epoch number=(default:50)",
                                     "Initial learning rate=(default:0.5)", "Initial radius=(default:function)",
+                                    "Subset weight matrix among epochs=(default:50)",
                                     "Plot reconstruction error",
                                     "Plot heatmap for SOM",
                                     "Plot heatmap of projection onto normal SOM"])
@@ -422,6 +431,7 @@ def main(argv):
                                                     {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
                                                     {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay> 
                                                     {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+                                                    {-k} <subset_net>
                                                     {-l} <label> {-m} <threshold>
                                                     {-1} {-2} {-3}
         """
@@ -464,6 +474,8 @@ Training SOM (option):
                 Default = 0.5
             -r: initial radius of BMU neighborhood
                 Default = 2/3 quantile of every distance between nodes
+            -k: subset weight matrix among epochs
+                Default = epoch number
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
@@ -515,10 +527,13 @@ Plot if specified:
             threshold = arg
         elif opt in ("-e"):
             epoch = int(arg)
+            subset_net = epoch
         elif opt in ("-a"):
             init_rate = float(arg)
         elif opt in ("-r"):
             init_radius = float(arg)
+        elif opt in ("-k"):
+            subset_net = int(arg)
         elif opt in ("-1"):
             print_error = True
         elif opt in ("-2"):
@@ -528,7 +543,7 @@ Plot if specified:
     som_anomaly = SomDetect(normal_file, online_file, cols, standard,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
-    som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
+    som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
     som_anomaly.detect_anomaly(label = label, threshold = threshold)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})

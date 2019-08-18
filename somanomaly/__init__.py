@@ -111,12 +111,13 @@ class kohonen:
             self.pts[:, 0] = self.pts[:, 0] + .5 * (self.pts[:, 0] % 2)
             self.pts[:, 1] = np.sqrt(3) / 2 * self.pts[:, 1]
 
-    def som(self, data, epoch = 100, init_rate = None, init_radius = None):
+    def som(self, data, epoch = 100, init_rate = None, init_radius = None, keep_net = False):
         """
         :param data: 3d array. processed data set for Online SOM Detector
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
+        :param keep_net: keep every weight matrix path?
         """
         num_obs = data.shape[0]
         obs_id = np.arange(num_obs)
@@ -124,6 +125,10 @@ class kohonen:
         node_id = None
         hci = None
         self.epoch = epoch
+        if keep_net:
+            self.net_path = np.empty(
+                (self.epoch, self.net_dim[0] * self.net_dim[1], self.nrow, self.ncol)
+            )
         # learning rate
         if init_rate is None:
             init_rate = .5
@@ -161,6 +166,8 @@ class kohonen:
                 self.net[node_id, :, :] += \
                     self.alpha * hci * \
                     (data[chose_i, :, :] - self.net[node_id, :, :]).reshape((self.nrow, self.ncol))
+            if keep_net:
+                self.net_path[i, :, :, :] = self.net
         self.reconstruction_error = pd.DataFrame({"Epoch": np.arange(self.epoch) + 1, "Reconstruction Error": rcst_err})
 
     def find_bmu(self, data, index):
