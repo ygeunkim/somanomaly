@@ -46,6 +46,9 @@ class kohonen:
         :param seed: Random seed
         """
         np.random.seed(seed = seed)
+        if xdim is None or ydim is None:
+            xdim = int(np.sqrt(5 * np.sqrt(data.shape[0])))
+            ydim = xdim
         self.net_dim = np.array([xdim, ydim])
         self.ncol = data.shape[2]
         self.nrow = data.shape[1]

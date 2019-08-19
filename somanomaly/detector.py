@@ -386,8 +386,8 @@ def main(argv):
     standard = False
     window_size = 30
     jump_size = 30
-    xdim = 50
-    ydim = 50
+    xdim = None
+    ydim = None
     topo = "hexagonal"
     neighbor = "gaussian"
     dist = "frobenius"
@@ -401,6 +401,7 @@ def main(argv):
     label = [1, 0]
     threshold = "ztest"
     ztest_opt = .9
+    threshold_list = None
     # print_eval
     print_eval = False
     target_names = ["anomaly", "normal"]
@@ -416,7 +417,8 @@ def main(argv):
                                     "True label file",
                                     "Standardize",
                                     "Window size=(default:30)", "Jump size=(default:30)",
-                                    "x-grid=(default:50)", "y-grid=(default:50)", "topology=(default:hexagonal)",
+                                    "x-grid=(default:sqrt 5 * sqrt N)", "y-grid=(default:sqrt 5 * sqrt N)",
+                                    "topology=(default:hexagonal)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
                                     "Decay=(default:exponential)",
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
@@ -457,9 +459,9 @@ Training SOM (option):
             -j: shift size
                 Default = 30
             -x: number of x-grid
-                Default = 50
+                Default = sqrt(5 * sqrt(nrow of som tensor))
             -y: number of y-grid
-                Default = 50
+                Default = sqrt(5 * sqrt(nrow of som tensor))
             -t: topology of SOM output space - rectangular or hexagonal
                 Default = hexagonal
             -f: neighborhood function - gaussian or bubble
@@ -556,6 +558,26 @@ Plot if specified:
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
+    print("process has ended=========================\n")
+    # print parameter
+    print("SOM parameters----------------------------")
+    if standard:
+        print("Standardized!")
+    print("[Window, jump]: ", [window_size, jump_size])
+    print("SOM grid: ", som_anomaly.som_grid.net_dim)
+    print("Topology: ", topo)
+    print("Neighborhood function: ", neighbor)
+    print("Decay function: ", decay)
+    print("Distance function: ", dist)
+    print("Epoch number: ", epoch)
+    if epoch > subset_net:
+        print("Subset weight matrix of: ", subset_net)
+    print("------------------------------------------")
+    if threshold_list is not None:
+        print("Anomaly detection by %s of %f" %(threshold, ztest_opt))
+    else:
+        print("Anomaly detection by ", threshold)
+    print("==========================================")
     # evaluation
     if print_eval:
         true_anomaly = pd.read_csv(true_file, header = None)
