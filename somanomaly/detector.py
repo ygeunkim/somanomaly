@@ -91,10 +91,11 @@ class SomDetect:
         else:
             self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
 
-    def detect_anomaly(self, label = None, threshold = "quantile"):
+    def detect_anomaly(self, label = None, threshold = "quantile", chi_opt = .9):
         """
         :param label: anomaly and normal label list
         :param threshold: threshold for detection - quantile, radius, mean, or inv_som
+        :param chi_opt: what number chi-squared quantile to use. Change this only when ztest threshold
         :return: Anomaly detection
         """
         if label is None:
@@ -205,7 +206,7 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            som_anomaly = dist_anomaly > chi2.ppf(.9, self.som_te.window_data.shape[1])
+            som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -363,7 +364,7 @@ class SomDetect:
                 [self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping online set")]
             )
             self.project = som_dist_calc[:, 1]
-        xdim = self.net_dim[0]
+        xdim = self.som_grid.net_dim[0]
         x = self.project % xdim
         y = self.project // xdim
         fig = go.Figure(
@@ -399,6 +400,7 @@ def main(argv):
     # detection arguments
     label = [1, 0]
     threshold = "ztest"
+    ztest_opt = .9
     # print_eval
     print_eval = False
     target_names = ["anomaly", "normal"]
@@ -481,6 +483,7 @@ Detecting anomalies (option):
                 Default = 1,0
             -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, or unitkmeans
                 Default = ztest
+                Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile. 
 Plot if specified:
             -1: plot reconstruction error path
             -2: plot heatmap of SOM
@@ -521,10 +524,15 @@ Plot if specified:
         elif opt in ("-s"):
             seed = int(arg)
         elif opt in ("-l"):
-            label = str(arg).strip().split(',')
+            label = str(arg).strip().split(",")
             label = [int(label[0]), int(label[1])]
         elif opt in ("-m"):
-            threshold = arg
+            if str(arg).strip().find(",") != -1:
+                threshold_list = str(arg).strip().split(",")
+                threshold = threshold_list[0]
+                ztest_opt = float(threshold_list[1])
+            else:
+                threshold = arg
         elif opt in ("-e"):
             epoch = int(arg)
             subset_net = epoch
@@ -544,7 +552,7 @@ Plot if specified:
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
-    som_anomaly.detect_anomaly(label = label, threshold = threshold)
+    som_anomaly.detect_anomaly(label = label, threshold = threshold, chi_opt = ztest_opt)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)

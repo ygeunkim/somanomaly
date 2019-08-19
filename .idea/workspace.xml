@@ -4,7 +4,6 @@
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -174,6 +173,10 @@
       <workItem from="1566040636917" duration="419000" />
       <workItem from="1566046884624" duration="206000" />
       <workItem from="1566108992650" duration="4745000" />
+      <workItem from="1566178279634" duration="195000" />
+      <workItem from="1566182602715" duration="1196000" />
+      <workItem from="1566186993137" duration="564000" />
+      <workItem from="1566192254888" duration="1730000" />
     </task>
     <servers />
   </component>

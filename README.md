@@ -109,6 +109,9 @@ So all these are optional arguments.
 -m  Threshold method - ztest (default), mean, quantile, radius, inv_som, kmeans, hclust, unitkmeans
 ```
 
+In case of `ztest` of `-m`, you can specify quantile simultaneously. The default is `.9`.
+If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantile. 
+
 #### Plot
 
 You can see the following plots if writing each parameter.
