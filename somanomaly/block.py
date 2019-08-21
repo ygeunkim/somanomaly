@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sys
 import getopt
+import time
 from scipy.stats import chi2
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
@@ -48,6 +49,7 @@ class KohonenBlock:
         num_tr = len(normal_list)
         num_te = len(online_list)
         self.standard = standard
+        self.net_dim = np.array([xdim, ydim])
         # Distance function
         dist_type = ["frobenius", "nuclear", "mahalanobis", "eros"]
         if dist not in dist_type:
@@ -55,29 +57,28 @@ class KohonenBlock:
         self.dist_func = dist
         # each block of normal data-set
         som_tr = SomData(normal_list[0], range(col_list[0], col_list[1]), window_size, jump_size)
-        self.som_te = SomData(online_list[0], range(col_list[0], col_list[1]), window_size, jump_size)
+        if self.standard:
+            som_tr.window_data = KohonenBlock.standardize_array(som_tr)
         som_grid = kohonen(som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
         self.net = som_grid.net
         j = 2
-        for i in range(1, num_tr):
+        for i in tqdm(range(1, num_tr), desc = "aggregate codebook"):
             som_tr = SomData(
                 normal_list[i],
                 range(col_list[j], col_list[j + 1]),
                 window_size, jump_size
             )
             if self.standard:
-                scaler = StandardScaler()
-                tmp_tr = som_tr.window_data.reshape((-1, som_tr.window_data.shape[2]))
-                tmp_tr = scaler.fit_transform(tmp_tr).reshape(som_tr.window_data.shape)
-                som_tr.window_data = tmp_tr
+                som_tr.window_data = KohonenBlock.standardize_array(som_tr)
             som_grid = kohonen(som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
             # train SOM in i-th block
             som_grid.som(som_tr.window_data, epoch, init_rate, init_radius, False)
             self.net = np.append(self.net, som_grid.net, axis = 2)
             j += 2
         # Online data-set
+        self.som_te = SomData(online_list[0], range(col_list[0], col_list[1]), window_size, jump_size)
         j = 2
-        for i in range(1, num_te):
+        for i in tqdm(range(1, num_te), desc = "online array"):
             self.som_te.window_data = np.append(
                 self.som_te.window_data,
                 SomData(
@@ -89,10 +90,23 @@ class KohonenBlock:
                 axis = 2
             )
             j += 2
+        if self.standard:
+            self.som_te.window_data = KohonenBlock.standardize_array(self.som_te)
         # anomaly
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
         self.anomaly = np.empty(self.som_te.n)
+
+    @staticmethod
+    def standardize_array(som_data):
+        """
+        :param som_data: SomData object
+        :return: window_data of standardized SomData
+        """
+        scaler = StandardScaler()
+        tmp_data = som_data.window_data.reshape((-1, som_data.window_data.shape[2]))
+        tmp_data = scaler.fit_transform(tmp_data).reshape(som_data.window_data.shape)
+        return tmp_data
 
     def detect_anomaly(self, label = None, threshold = "ztest", chi_opt = .9):
         """
@@ -206,8 +220,8 @@ def main(argv):
     standard = False
     window_size = 30
     jump_size = 30
-    xdim = None
-    ydim = None
+    xdim = 25
+    ydim = 25
     topo = "hexagonal"
     neighbor = "gaussian"
     dist = "frobenius"
@@ -232,7 +246,7 @@ def main(argv):
                                     "True label file",
                                     "Standardize",
                                     "Window size=(default:30)", "Jump size=(default:30)",
-                                    "x-grid=(default:sqrt 5 * sqrt N)", "y-grid=(default:sqrt 5 * sqrt N)",
+                                    "x-grid=(default:25)", "y-grid=(default:25)",
                                     "topology=(default:hexagonal)",
                                     "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
                                     "Decay=(default:exponential)",
@@ -274,9 +288,9 @@ Training SOM (option):
             -j: shift size
                 Default = 30
             -x: number of x-grid
-                Default = sqrt(5 * sqrt(nrow of som tensor))
+                Default = 25
             -y: number of y-grid
-                Default = sqrt(5 * sqrt(nrow of som tensor))
+                Default = 25
             -t: topology of SOM output space - rectangular or hexagonal
                 Default = hexagonal
             -f: neighborhood function - gaussian or bubble
@@ -349,6 +363,7 @@ Detecting anomalies (option):
             init_rate = float(arg)
         elif opt in ("-r"):
             init_radius = float(arg)
+    start_time = time.time()
     som_block = KohonenBlock(
         normal_list, online_list, col_list,
         standard, window_size, jump_size,
@@ -359,24 +374,24 @@ Detecting anomalies (option):
     som_block.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_block.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
-    # print("process has ended=========================\n")
+    print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # print parameter
-    # print("SOM parameters----------------------------")
-    # if standard:
-    #     print("Standardized!")
-    # print("[Window, jump]: ", [window_size, jump_size])
-    # print("SOM grid: ", som_anomaly.som_grid.net_dim)
-    # print("Topology: ", topo)
-    # print("Neighborhood function: ", neighbor)
-    # print("Decay function: ", decay)
-    # print("Distance function: ", dist)
-    # print("Epoch number: ", epoch)
-    # print("------------------------------------------")
-    # if threshold_list is not None:
-    #     print("Anomaly detection by %s of %f" %(threshold, ztest_opt))
-    # else:
-    #     print("Anomaly detection by ", threshold)
-    # print("==========================================")
+    print("SOM parameters----------------------------")
+    if standard:
+        print("Standardized!")
+    print("[Window, jump]: ", [window_size, jump_size])
+    print("SOM grid: ", som_block.net_dim)
+    print("Topology: ", topo)
+    print("Neighborhood function: ", neighbor)
+    print("Decay function: ", decay)
+    print("Distance function: ", dist)
+    print("Epoch number: ", epoch)
+    print("------------------------------------------")
+    if threshold_list is not None:
+        print("Anomaly detection by %s of %.3f" %(threshold, ztest_opt))
+    else:
+        print("Anomaly detection by ", threshold)
+    print("==========================================")
     # evaluation
     if print_eval:
         true_anomaly = pd.read_csv(true_file, header = None)
