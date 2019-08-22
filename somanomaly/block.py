@@ -374,6 +374,7 @@ Detecting anomalies (option):
     som_block.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_block.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
+    print("")
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # print parameter
     print("SOM parameters----------------------------")

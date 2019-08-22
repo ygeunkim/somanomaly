@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 import sys
 import getopt
+import time
 import plotly.graph_objs as go
 from scipy.stats import chi2
+from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -103,12 +105,12 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans", "testerr"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
         # threshold with mapping
-        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans":
+        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans" or threshold == "testerr":
             anomaly_threshold = None
             dist_anomaly = None
             # normal data
@@ -169,6 +171,9 @@ class SomDetect:
                             cluster[i] = 1
                     som_anomaly = np.full(online_net.shape[0], fill_value = False, dtype = bool)
                     som_anomaly[cluster == 0] = True
+            elif threshold == "testerr":
+                normal_err = self.som_grid.reconstruction_error["Reconstruction Error"].to_numpy()
+                som_anomaly = dist_anomaly > (normal_err[self.som_grid.epoch - 1] / self.som_tr.window_data.shape[0])
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -483,7 +488,7 @@ Training SOM (option):
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, or unitkmeans
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, unitkmeans, or testerr
                 Default = ztest
                 Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile. 
 Plot if specified:
@@ -550,6 +555,7 @@ Plot if specified:
             print_heat = True
         elif opt in ("-3"):
             print_projection = True
+    start_time = time.time()
     som_anomaly = SomDetect(normal_file, online_file, cols, standard,
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
@@ -558,7 +564,8 @@ Plot if specified:
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
-    print("process has ended=========================\n")
+    print("")
+    print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # print parameter
     print("SOM parameters----------------------------")
     if standard:
@@ -574,7 +581,7 @@ Plot if specified:
         print("Subset weight matrix of: ", subset_net)
     print("------------------------------------------")
     if threshold_list is not None:
-        print("Anomaly detection by %s of %f" %(threshold, ztest_opt))
+        print("Anomaly detection by %s of %.3f" %(threshold, ztest_opt))
     else:
         print("Anomaly detection by ", threshold)
     print("==========================================")
@@ -589,12 +596,15 @@ Plot if specified:
             )
         )
     # plot
-    if print_error:
-        som_anomaly.som_grid.plot_error()
-    if print_heat:
-        som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
-    if print_projection:
-        som_anomaly.plot_heatmap()
+    if print_error or print_heat or print_projection:
+        plot_start = time.time()
+        if print_error:
+            som_anomaly.som_grid.plot_error()
+        if print_heat:
+            som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
+        if print_projection:
+            som_anomaly.plot_heatmap()
+        print("Plotting time: %.2f seconds" % (time.time() - plot_start))
 
 
 if __name__ == '__main__':
