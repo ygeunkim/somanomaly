@@ -11,6 +11,7 @@ This module requires the following.
 - scipy: [https://www.scipy.org](https://www.scipy.org)
 - scikit-learn: [https://scikit-learn.org/stable/](https://scikit-learn.org/stable/)
 - plotly: [https://plot.ly/python/](https://plot.ly/python/)
+- matplotlib: [https://matplotlib.org](https://matplotlib.org)
 - tqdm: [https://tqdm.github.io](https://tqdm.github.io)
 
 ```
@@ -106,10 +107,10 @@ So all these are optional arguments.
 
 ```
 -l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - ztest (default), mean, quantile, radius, inv_som, kmeans, hclust, unitkmeans
+-m  Threshold method - ztest (default), ztest_proj, mean, quantile, radius, inv_som, kmeans, hclust, unitkmeans
 ```
 
-In case of `ztest` of `-m`, you can specify quantile simultaneously. The default is `.9`.
+In case of `ztest` or `ztest_proj` of `-m`, you can specify quantile simultaneously. The default is `.9`.
 If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantile. 
 
 #### Plot

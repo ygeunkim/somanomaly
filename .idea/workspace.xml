@@ -3,10 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -185,7 +182,7 @@
       <workItem from="1566354103015" duration="4594000" />
       <workItem from="1566366114234" duration="4348000" />
       <workItem from="1566438181491" duration="2474000" />
-      <workItem from="1566445450478" duration="5340000" />
+      <workItem from="1566445450478" duration="5797000" />
     </task>
     <servers />
   </component>
