@@ -222,13 +222,12 @@ class SomDetect:
                 self.som_grid.dist_normal = normal_distance[:, 0]
                 self.som_grid.project = normal_distance[:, 1]
             normal_project = np.unique(self.som_grid.project)
-            net_stand = self.net
+            net_stand = self.net[normal_project.astype(int), :, :]
             # standardize codebook otherwise input standardized
             if not self.standard:
-                net_stand = self.net.reshape((-1, self.net.shape[2]))
+                net_tmp = net_stand.reshape((-1, net_stand.shape[2]))
                 scaler = StandardScaler()
-                net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
-            net_stand = net_stand[normal_project.astype(int), :, :]
+                net_stand = scaler.fit_transform(net_tmp).reshape(net_stand.shape)
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
