@@ -2,5 +2,6 @@ Numpy
 scipy
 pandas
 plotly
+matplotlib
 scikit-learn
 tqdm

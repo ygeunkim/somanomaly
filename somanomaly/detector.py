@@ -4,8 +4,9 @@ import sys
 import getopt
 import time
 import plotly.graph_objs as go
+import plotly.tools as tls
+import matplotlib.pyplot as plt
 from scipy.stats import chi2
-from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -105,7 +106,7 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans", "testerr"]
+        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans", "testerr", "ztest_proj"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
@@ -173,7 +174,8 @@ class SomDetect:
                     som_anomaly[cluster == 0] = True
             elif threshold == "testerr":
                 normal_err = self.som_grid.reconstruction_error["Reconstruction Error"].to_numpy()
-                som_anomaly = dist_anomaly > (normal_err[self.som_grid.epoch - 1] / self.som_tr.window_data.shape[0])
+                test_err = np.square(dist_anomaly)
+                som_anomaly = test_err > (normal_err[self.som_grid.epoch - 1] / self.som_tr.window_data.shape[0])
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -208,6 +210,25 @@ class SomDetect:
                 net_stand = self.net.reshape((-1, self.net.shape[2]))
                 scaler = StandardScaler()
                 net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
+            dist_anomaly = np.asarray(
+                [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
+            )
+            som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
+        elif threshold == "ztest_proj":
+            if self.som_grid.project is None:
+                normal_distance = np.asarray(
+                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mapping")]
+                )
+                self.som_grid.dist_normal = normal_distance[:, 0]
+                self.som_grid.project = normal_distance[:, 1]
+            normal_project = np.unique(self.som_grid.project)
+            net_stand = self.net
+            # standardize codebook otherwise input standardized
+            if not self.standard:
+                net_stand = self.net.reshape((-1, self.net.shape[2]))
+                scaler = StandardScaler()
+                net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
+            net_stand = net_stand[normal_project.astype(int), :, :]
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
@@ -372,14 +393,23 @@ class SomDetect:
         xdim = self.som_grid.net_dim[0]
         x = self.project % xdim
         y = self.project // xdim
-        fig = go.Figure(
-            go.Histogram2d(
-                x = x,
-                y = y,
-                colorscale="Viridis"
+        if self.som_grid.topo == "rectangular":
+            fig = go.Figure(
+                go.Histogram2d(
+                    x = x,
+                    y = y,
+                    colorscale="Viridis"
+                )
             )
-        )
-        fig.show()
+            fig.show()
+        elif self.som_grid.topo == "hexagonal":
+            x = x + .5 * (y % 2)
+            y = np.sqrt(3) / 2 * y
+            # plt_hex = plt.hexbin(x, y)
+            # plt.close()
+            # fig = tls.mpl_to_plotly(plt_hex)
+            plt.hexbin(x, y)
+            plt.show()
 
 
 def main(argv):
@@ -568,15 +598,15 @@ Plot if specified:
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # print parameter
     print("SOM parameters----------------------------")
-    if standard:
+    if som_anomaly.standard:
         print("Standardized!")
     print("[Window, jump]: ", [window_size, jump_size])
     print("SOM grid: ", som_anomaly.som_grid.net_dim)
-    print("Topology: ", topo)
-    print("Neighborhood function: ", neighbor)
-    print("Decay function: ", decay)
-    print("Distance function: ", dist)
-    print("Epoch number: ", epoch)
+    print("Topology: ", som_anomaly.som_grid.topo)
+    print("Neighborhood function: ", som_anomaly.som_grid.neighbor_func)
+    print("Decay function: ", som_anomaly.som_grid.decay_func)
+    print("Distance function: ", som_anomaly.som_grid.dist_func)
+    print("Epoch number: ", som_anomaly.som_grid.epoch)
     if epoch > subset_net:
         print("Subset weight matrix of: ", subset_net)
     print("------------------------------------------")

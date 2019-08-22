@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
+import plotly.tools as tls
+import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -111,7 +113,7 @@ class kohonen:
             )
         ).reshape(2, np.prod(self.net_dim)).T
         if self.topo == "hexagonal":
-            self.pts[:, 0] = self.pts[:, 0] + .5 * (self.pts[:, 0] % 2)
+            self.pts[:, 0] = self.pts[:, 0] + .5 * (self.pts[:, 1] % 2)
             self.pts[:, 1] = np.sqrt(3) / 2 * self.pts[:, 1]
 
     def som(self, data, epoch = 100, init_rate = None, init_radius = None, keep_net = False):
@@ -283,11 +285,20 @@ class kohonen:
             self.project = normal_distance[:, 1]
         x = self.project % self.net_dim[0]
         y = self.project // self.net_dim[0]
-        fig = go.Figure(
-            go.Histogram2d(
-                x = x,
-                y = y,
-                colorscale = "Viridis"
+        if self.topo == "rectangular":
+            fig = go.Figure(
+                go.Histogram2d(
+                    x = x,
+                    y = y,
+                    colorscale = "Viridis"
+                )
             )
-        )
-        fig.show()
+            fig.show()
+        elif self.topo == "hexagonal":
+            x = x + .5 * (y % 2)
+            y = np.sqrt(3) / 2 * y
+            # plt_hex = plt.hexbin(x, y)
+            # plt.close()
+            # fig = tls.mpl_to_plotly(plt_hex)
+            plt.hexbin(x, y)
+            plt.show()
