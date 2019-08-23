@@ -111,7 +111,7 @@ class SomDetect:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
         # threshold with mapping
-        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans" or threshold == "testerr":
+        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans" or threshold == "testerr" or threshold == "ztest_proj":
             anomaly_threshold = None
             dist_anomaly = None
             # normal data
@@ -176,6 +176,29 @@ class SomDetect:
                 normal_err = self.som_grid.reconstruction_error["Reconstruction Error"].to_numpy()
                 test_err = np.square(dist_anomaly)
                 som_anomaly = test_err > (normal_err[self.som_grid.epoch - 1] / self.som_tr.window_data.shape[0])
+            elif threshold == "ztest_proj":
+                normal_project = np.unique(self.som_grid.project)
+                net_stand = self.net[normal_project.astype(int), :, :]
+                # standardize codebook otherwise input standardized
+                if not self.standard:
+                    net_tmp = net_stand.reshape((-1, net_stand.shape[2]))
+                    scaler = StandardScaler()
+                    net_stand = scaler.fit_transform(net_tmp).reshape(net_stand.shape)
+                # anomaly_project = np.unique(self.project)
+                te_stand = self.net[self.project.astype(int), :, :]
+                if not self.standard:
+                    net_tmp = te_stand.reshape((-1, te_stand.shape[2]))
+                    scaler = StandardScaler()
+                    te_stand = scaler.fit_transform(net_tmp).reshape(te_stand.shape)
+                # mapped net of normal vs mapped net of online
+                dist_anomaly = np.asarray(
+                    [np.average(
+                        np.asarray(
+                            [self.dist_mat(te_stand[i, :, :], net_stand[j, :, :]) for j in tqdm(range(net_stand.shape[0]), desc="versus normal mapped")]
+                        )
+                    ) for i in tqdm(range(te_stand.shape[0]), desc="online repeat")]
+                )
+                som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -210,24 +233,6 @@ class SomDetect:
                 net_stand = self.net.reshape((-1, self.net.shape[2]))
                 scaler = StandardScaler()
                 net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
-            dist_anomaly = np.asarray(
-                [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
-            )
-            som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
-        elif threshold == "ztest_proj":
-            if self.som_grid.project is None:
-                normal_distance = np.asarray(
-                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mapping")]
-                )
-                self.som_grid.dist_normal = normal_distance[:, 0]
-                self.som_grid.project = normal_distance[:, 1]
-            normal_project = np.unique(self.som_grid.project)
-            net_stand = self.net[normal_project.astype(int), :, :]
-            # standardize codebook otherwise input standardized
-            if not self.standard:
-                net_tmp = net_stand.reshape((-1, net_stand.shape[2]))
-                scaler = StandardScaler()
-                net_stand = scaler.fit_transform(net_tmp).reshape(net_stand.shape)
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
