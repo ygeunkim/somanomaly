@@ -244,18 +244,16 @@ class SomDetect:
             )
             som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
         elif threshold == "clt":
-            if self.som_grid.project is None:
-                normal_distance = np.asarray(
-                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc="mapping")]
-                )
-                self.som_grid.dist_normal = normal_distance[:, 0]
-                self.som_grid.project = normal_distance[:, 1]
-            clt_mean = np.average(self.som_grid.dist_normal)
-            clt_sd = np.std(self.som_grid.dist_normal)
+            dist_normal = np.asarray(
+                [self.dist_normal(k) for k in tqdm(range(self.som_tr.window_data.shape[0]), desc = "pseudo-population")]
+            )
+            clt_mean = np.average(dist_normal)
+            clt_sd = np.std(dist_normal)
             dist_anomaly = np.asarray(
                 [self.dist_codebook(self.net, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            som_anomaly = dist_anomaly > norm.ppf(chi_opt, loc = clt_mean, scale = clt_sd)
+            # sqrt(n) (dbar - mu) -> N(0, sigma2)
+            som_anomaly = np.sqrt(self.net.shape[0]) * (dist_anomaly - clt_mean) > norm.ppf(chi_opt, loc = 0, scale = clt_sd)
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -285,7 +283,7 @@ class SomDetect:
         :param index: Row index for normal data set
         :return: every distance between normal som matrix and weight matrix
         """
-        return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in range(self.net.shape[0])])
+        return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "codebook distance")])
 
     def dist_mat(self, mat1, mat2):
         """
