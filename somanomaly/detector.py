@@ -7,6 +7,7 @@ import plotly.graph_objs as go
 import plotly.tools as tls
 import matplotlib.pyplot as plt
 from scipy.stats import chi2
+from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -106,7 +107,12 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = ["quantile", "radius", "mean", "inv_som", "kmeans", "hclust", "ztest", "unitkmeans", "testerr", "ztest_proj"]
+        thr_types = [
+            "quantile", "radius", "mean", "inv_som",
+            "kmeans", "hclust",
+            "ztest", "unitkmeans", "testerr",
+            "ztest_proj", "clt"
+        ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         som_anomaly = None
@@ -237,6 +243,19 @@ class SomDetect:
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
             som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
+        elif threshold == "clt":
+            if self.som_grid.project is None:
+                normal_distance = np.asarray(
+                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc="mapping")]
+                )
+                self.som_grid.dist_normal = normal_distance[:, 0]
+                self.som_grid.project = normal_distance[:, 1]
+            clt_mean = np.average(self.som_grid.dist_normal)
+            clt_sd = np.std(self.som_grid.dist_normal)
+            dist_anomaly = np.asarray(
+                [self.dist_codebook(self.net, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
+            )
+            som_anomaly = dist_anomaly > norm.ppf(chi_opt, loc = clt_mean, scale = clt_sd)
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -274,12 +293,12 @@ class SomDetect:
         :param mat2: Matrix
         :return: distance between mat1 and mat2
         """
+        x = mat1 - mat2
         if self.som_grid.dist_func == "frobenius":
-            return np.linalg.norm(mat1 - mat2, "fro")
+            return np.linalg.norm(x, "fro")
         elif self.som_grid.dist_func == "nuclear":
-            return np.linalg.norm(mat1 - mat2, "nuc")
+            return np.linalg.norm(x, "nuc")
         elif self.som_grid.dist_func == "mahalanobis":
-            x = mat1 - mat2
             covmat = np.cov(x, rowvar = False)
             # ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
             w, v = np.linalg.eigh(covmat)
@@ -288,7 +307,6 @@ class SomDetect:
             ss = x.dot(covinv).dot(x.T)
             return np.sqrt(np.trace(ss))
         elif self.som_grid.dist_func == "eros":
-            x = mat1 - mat2
             covmat = np.cov(x, rowvar = False)
             # u, s, vh = np.linalg.svd(covmat, full_matrices = False)
             u, s, vh = randomized_svd(covmat, n_components = covmat.shape[1], n_iter = 1, random_state = None)
