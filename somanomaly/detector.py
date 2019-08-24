@@ -55,6 +55,8 @@ class SomDetect:
         self.som_tr = SomData(path_normal, cols, window_size, jump_size)
         self.som_te = SomData(path_online, cols, window_size, jump_size)
         self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
+        self.win_size = window_size
+        self.jump = jump_size
         # standardization
         self.standard = standard
         if self.standard:
@@ -244,14 +246,20 @@ class SomDetect:
             )
             som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
         elif threshold == "clt":
-            dist_normal = np.asarray(
-                [self.dist_normal(k) for k in tqdm(range(self.som_tr.window_data.shape[0]), desc = "pseudo-population")]
+            normal_distance = np.asarray(
+                [self.dist_normal(self.net, j) for j in tqdm(range(self.net.shape[0]), desc = "pseudo-population")]
             )
-            clt_mean = np.average(dist_normal)
-            clt_sd = np.std(dist_normal)
+            # MLE
+            clt_mean = np.average(normal_distance[:, 0])
+            clt_sd = np.average(normal_distance[:, 1])
+            # online set
             dist_anomaly = np.asarray(
                 [self.dist_codebook(self.net, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
+            # right-tail
+            alpha = 1 - chi_opt
+            alpha /= 2
+            chi_opt = 1 - alpha
             # sqrt(n) (dbar - mu) -> N(0, sigma2)
             som_anomaly = np.sqrt(self.net.shape[0]) * (dist_anomaly - clt_mean) > norm.ppf(chi_opt, loc = 0, scale = clt_sd)
         # label
@@ -278,12 +286,16 @@ class SomDetect:
         )
         return np.average(dist_wt)
 
-    def dist_normal(self, index):
+    def dist_normal(self, codebook, node):
         """
-        :param index: Row index for normal data set
-        :return: every distance between normal som matrix and weight matrix
+        :param codebook: transformed codebook matrices
+        :param node: node index
+        :return: average and sd of distances between normal som matrix and chosen weight matrix
         """
-        return np.asarray([self.som_grid.dist_mat(self.som_tr.window_data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "codebook distance")])
+        dist_wt = np.asarray(
+            [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
+        )
+        return np.average(dist_wt), np.std(dist_wt)
 
     def dist_mat(self, mat1, mat2):
         """
@@ -393,8 +405,10 @@ class SomDetect:
         return np.delete(divisive, 0)
 
     def label_anomaly(self):
-        win_size = self.som_te.window_data.shape[1]
-        jump_size = (self.som_te.n - win_size) // (self.som_te.window_data.shape[0] - 1)
+        win_size = self.win_size
+        jump_size = self.jump
+        # win_size = self.som_te.window_data.shape[1]
+        # jump_size = (self.som_te.n - win_size) // (self.som_te.window_data.shape[0] - 1)
         # first assign by normal
         self.anomaly = np.repeat(self.label[1], self.anomaly.shape[0])
         for i in tqdm(range(self.window_anomaly.shape[0]), desc = "anomaly unit change"):
@@ -620,7 +634,7 @@ Plot if specified:
     print("SOM parameters----------------------------")
     if som_anomaly.standard:
         print("Standardized!")
-    print("[Window, jump]: ", [window_size, jump_size])
+    print("[Window, jump]: ", [som_anomaly.win_size, som_anomaly.jump])
     print("SOM grid: ", som_anomaly.som_grid.net_dim)
     print("Topology: ", som_anomaly.som_grid.topo)
     print("Neighborhood function: ", som_anomaly.som_grid.neighbor_func)
