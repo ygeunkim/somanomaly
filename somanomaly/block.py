@@ -4,6 +4,7 @@ import sys
 import getopt
 import time
 from scipy.stats import chi2
+from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
