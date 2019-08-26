@@ -84,7 +84,6 @@ class kohonen:
         self.sigma = None
         self.initial_learn = None
         self.initial_r = None
-        self.time_constant = None
         # find_bmu()
         self.bmu = None
         # plot
@@ -145,10 +144,8 @@ class kohonen:
         self.sigma = init_radius
         self.initial_r = init_radius
         # time constant (lambda)
-        if self.decay_func == "exponential":
-            self.time_constant = epoch / np.log(self.sigma)
-        elif self.decay_func == "linear":
-            self.time_constant = 1 / epoch
+        rate_constant = epoch
+        radius_constant = epoch / np.log(self.sigma)
         # distance between nodes
         bmu_dist = self.dci[1, :]
         rcst_err = np.empty(epoch)
@@ -160,8 +157,8 @@ class kohonen:
             rcst_err[i] = np.sum([np.square(self.dist_mat(data, j, self.bmu.astype(int))) for j in range(data.shape[0])])
             bmu_dist = self.dci[self.bmu.astype(int), :].flatten()
             # decay
-            self.sigma = self.decay(init_radius, i + 1, self.time_constant)
-            self.alpha = self.decay(init_rate, i + 1, self.time_constant)
+            self.sigma = self.decay(init_radius, i + 1, radius_constant)
+            self.alpha = self.decay(init_rate, i + 1, rate_constant)
             # neighboring nodes (includes BMU)
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
             for k in tqdm(range(neighbor_neuron.shape[0]), desc = "updating"):
@@ -236,7 +233,7 @@ class kohonen:
         if self.decay_func == "exponential":
             return init * np.exp(-time / time_constant)
         elif self.decay_func == "linear":
-            return init - time * time_constant
+            return init * (1 - time / time_constant)
 
     def neighborhood(self, node_distance, radius):
         """
