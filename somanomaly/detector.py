@@ -259,29 +259,31 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(self.net, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            # right-tail
+            # test level - bonferroni correction = alpha / N
             alpha = 1 - chi_opt
-            alpha /= 2
-            chi_opt = 1 - alpha
+            # alpha /= self.net.shape[0]
+            alpha /= self.som_te.window_data.shape[0]
             if threshold == "clt":
                 # mu = mean(mu1, ..., muN)
                 clt_mean = np.average(normal_distance[:, 0])
-                # sigma = sqrt(sigma1 ** 2 / n1 + ... + sigmaN ** 2 / nN)
+                # sigma = sqrt(sigma1 ** 2 + ... + sigmaN ** 2) / N
                 clt_sd = np.sqrt(
                     np.sum(
-                        np.square(normal_distance[:, 1]) / self.som_tr.window_data.shape[0]
+                        normal_distance[:, 1]
                     )
-                )
+                ) / self.net.shape[0]
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
-                dstat = np.sqrt(self.net.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
-                som_anomaly = dstat > norm.ppf(chi_opt)
+                dstat = (dist_anomaly - clt_mean) / clt_sd
+                # H1 D > 0
+                som_anomaly = 1 - norm.cdf(dstat) <= alpha
             elif threshold == "cltlind":
                 clt_mean = np.average(normal_distance[:, 0])
                 sn = np.sqrt(
-                    np.sum(np.square(normal_distance[:, 1]))
+                    np.sum(normal_distance[:, 1])
                 )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
-                som_anomaly = self.net.shape[0] * (dist_anomaly - clt_mean) / sn > norm.ppf(chi_opt)
+                dstat = self.net.shape[0] * (dist_anomaly - clt_mean) / sn
+                som_anomaly = 1 - norm.cdf(dstat) <= alpha
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -315,7 +317,7 @@ class SomDetect:
         dist_wt = np.asarray(
             [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
         )
-        return np.average(dist_wt), np.std(dist_wt)
+        return np.average(dist_wt), np.var(dist_wt)
 
     def resample_normal(self, boot_num):
         """
