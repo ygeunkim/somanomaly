@@ -8,6 +8,7 @@ import plotly.tools as tls
 import matplotlib.pyplot as plt
 from scipy.stats import chi2
 from scipy.stats import norm
+from scipy.stats import f
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -114,7 +115,8 @@ class SomDetect:
             "quantile", "radius", "mean", "inv_som",
             "kmeans", "hclust",
             "ztest", "unitkmeans", "testerr",
-            "ztest_proj", "clt", "cltlind"
+            "ztest_proj", "clt", "cltlind",
+            "anova"
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
@@ -284,6 +286,34 @@ class SomDetect:
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 dstat = self.net.shape[0] * (dist_anomaly - clt_mean) / sn
                 som_anomaly = 1 - norm.cdf(dstat) <= alpha
+        elif threshold == "anova":
+            if bootstrap == 1:
+                normal_distance = np.asarray(
+                    [self.dist_normal(self.net, j) for j in tqdm(range(self.net.shape[0]), desc = "pseudo-population")]
+                )
+            else:
+                normal_distance = np.asarray(
+                    [self.dist_bootstrap(self.net, j, bootstrap) for j in tqdm(range(self.net.shape[0]), desc = "pseudo-population")]
+                )
+            pop_mean = np.average(normal_distance[:, 0])
+            # treatment - obs of online set
+            trt = self.som_te.window_data.shape[0]
+            dij = np.empty((self.net.shape[0], trt))
+            for k in tqdm(range(trt), desc = "treatment structure"):
+                dij[:, k] = self.dist_dij(self.net, k)
+            num = np.sum(dij.shape)
+            # treatment mean
+            dist_anomaly = np.average(dij, axis = 0)
+            # post-anova comparison of means - scheffe
+            mse = np.sum(
+                np.square(dij - dist_anomaly) / (num - trt)
+            )
+            std_err = np.sqrt(
+                mse / self.net.shape[0]
+            )
+            # (dbar - sec * sqrt((a-1) * F(a-1, N-a), dbar - sec * sqrt((a-1) * F(a-1, N-a))
+            dstat = (dist_anomaly - pop_mean) / std_err
+            som_anomaly = dstat >= np.sqrt((trt - 1) * f.ppf(chi_opt, trt - 1, num - trt))
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -318,6 +348,18 @@ class SomDetect:
             [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
         )
         return np.average(dist_wt), np.var(dist_wt)
+
+    def dist_dij(self, codebook, index):
+        """
+        :param codebook: transformed codebook matrices
+        :param index: Row index for online data set
+        :return: every distance pair between online data set and weight matrix
+        """
+        net_num = codebook.shape[0]
+        dist_wt = np.asarray(
+            [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
+        )
+        return dist_wt
 
     def resample_normal(self, boot_num):
         """

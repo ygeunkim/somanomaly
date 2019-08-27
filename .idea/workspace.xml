@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -195,6 +194,9 @@
       <workItem from="1566783561710" duration="468000" />
       <workItem from="1566808531715" duration="710000" />
       <workItem from="1566812181313" duration="4654000" />
+      <workItem from="1566868154847" duration="1582000" />
+      <workItem from="1566876948026" duration="7873000" />
+      <workItem from="1566902712394" duration="529000" />
     </task>
     <servers />
   </component>
