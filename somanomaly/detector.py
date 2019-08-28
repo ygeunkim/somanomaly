@@ -277,7 +277,13 @@ class SomDetect:
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
                 dstat = (dist_anomaly - clt_mean) / clt_sd
                 # H1 D > 0
-                som_anomaly = 1 - norm.cdf(dstat) <= alpha
+                # som_anomaly = 1 - norm.cdf(dstat) <= alpha
+                # Benjamini–Hochberg - i * alpha / N for ordered p-value
+                pvalue = 1 - norm.cdf(dstat)
+                p_ordered = np.argsort(pvalue)
+                alpha *= (np.arange(dstat.shape[0]) + 1)
+                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
+                som_anomaly[p_ordered] = pvalue[p_ordered] <= alpha
             elif threshold == "cltlind":
                 clt_mean = np.average(normal_distance[:, 0])
                 sn = np.sqrt(
@@ -285,7 +291,13 @@ class SomDetect:
                 )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 dstat = self.net.shape[0] * (dist_anomaly - clt_mean) / sn
-                som_anomaly = 1 - norm.cdf(dstat) <= alpha
+                # som_anomaly = 1 - norm.cdf(dstat) <= alpha
+                # Benjamini–Hochberg - i * alpha / N for ordered p-value
+                pvalue = 1 - norm.cdf(dstat)
+                p_ordered = np.argsort(pvalue)
+                alpha *= (np.arange(dstat.shape[0]) + 1)
+                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value=False, dtype=bool)
+                som_anomaly[p_ordered] = pvalue[p_ordered] <= alpha
         elif threshold == "anova":
             if bootstrap == 1:
                 normal_distance = np.asarray(
