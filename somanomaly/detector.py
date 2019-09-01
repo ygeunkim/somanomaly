@@ -116,7 +116,7 @@ class SomDetect:
             "kmeans", "hclust",
             "ztest", "unitkmeans", "testerr",
             "ztest_proj", "clt", "cltlind",
-            "anova"
+            "anova", "clt2", "cltlind2"
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
@@ -277,7 +277,7 @@ class SomDetect:
                     )
                 ) / self.net.shape[0]
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
-                dstat = (dist_anomaly - clt_mean) / clt_sd
+                dstat = np.sqrt(self.net.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
                 # H1 D > 0
                 # som_anomaly = 1 - norm.cdf(dstat) <= alpha
                 # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
@@ -302,6 +302,70 @@ class SomDetect:
                 p_ordered = np.argsort(pvalue)
                 test = np.argwhere(pvalue[p_ordered] <= alpha)
                 som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value=False, dtype=bool)
+                if test.shape[0] != 0:
+                    test_k = np.max(test)
+                    som_anomaly[p_ordered[:(test_k + 1)]] = True
+        elif threshold == "clt2" or threshold == "cltlind2":
+            if self.som_grid.project is None:
+                normal_distance = np.asarray(
+                    [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc="mapping")]
+                )
+                self.som_grid.dist_normal = normal_distance[:, 0]
+                self.som_grid.project = normal_distance[:, 1]
+            # mapped codebook
+            normal_project, proj_count = np.unique(self.som_grid.project, return_counts = True)
+            net_stand = self.net[normal_project.astype(int), :, :]
+            if bootstrap == 1:
+                normal_distance = np.asarray(
+                    [self.dist_normal(net_stand, j) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
+                )
+            else:
+                normal_distance = np.asarray(
+                    [self.dist_bootstrap(net_stand, j, bootstrap) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
+                )
+            # online set
+            dist_anomaly = np.asarray(
+                [self.dist_codebook(net_stand, k, w = proj_count) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
+            )
+            # test level - bonferroni correction = alpha / N
+            alpha = 1 - chi_opt
+            # alpha /= self.net.shape[0]
+            alpha /= self.som_te.window_data.shape[0]
+            # Benjamini–Hochberg - i * alpha / N for ordered p-value
+            alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
+            if threshold == "clt2":
+                # mu = mean(mu1, ..., muN)
+                clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
+                # sigma = sqrt(sigma1 ** 2 + ... + sigmaN ** 2) / N
+                clt_sd = np.sqrt(
+                    np.sum(
+                        normal_distance[:, 1] * proj_count
+                    )
+                ) / net_stand.shape[0]
+                # sqrt(n) (dbar - mu) -> N(0, sigma2)
+                dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
+                # H1 D > 0
+                # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
+                # 2 reject every H(j), j = 1, ..., k
+                pvalue = 1 - norm.cdf(dstat)
+                p_ordered = np.argsort(pvalue)
+                test = np.argwhere(pvalue[p_ordered] <= alpha)
+                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
+                if test.shape[0] != 0:
+                    test_k = np.max(test)
+                    som_anomaly[p_ordered[:(test_k + 1)]] = True
+            elif threshold == "cltlind2":
+                clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
+                sn = np.sqrt(
+                    np.sum(normal_distance[:, 1] * proj_count)
+                )
+                # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
+                dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
+                # Benjamini–Hochberg
+                pvalue = 1 - norm.cdf(dstat)
+                p_ordered = np.argsort(pvalue)
+                test = np.argwhere(pvalue[p_ordered] <= alpha)
+                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
                 if test.shape[0] != 0:
                     test_k = np.max(test)
                     som_anomaly[p_ordered[:(test_k + 1)]] = True
@@ -345,17 +409,20 @@ class SomDetect:
         dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
 
-    def dist_codebook(self, codebook, index):
+    def dist_codebook(self, codebook, index, w = None):
         """
         :param codebook: transformed codebook matrices
         :param index: Row index for online data set
+        :param w: Weight for average
         :return: average distance between online data set and weight matrix
         """
         net_num = codebook.shape[0]
         dist_wt = np.asarray(
             [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
         )
-        return np.average(dist_wt)
+        if w is None:
+            w = np.repeat(1, net_num)
+        return np.average(dist_wt, weights = w)
 
     def dist_normal(self, codebook, node):
         """
