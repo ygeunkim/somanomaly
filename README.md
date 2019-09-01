@@ -148,15 +148,10 @@ The algorithm requires computing *distance between matrices* - input matrix and 
 
 ### Anomaly detection
 
-#### Threshold by distances with codebook
+Using **distances from codebook matrices**, think the windows that have large distance values from the codebook matrices as anomalies.
 
-1. Build 3d array for online data-set.
-2. Compute each distance between weight (codebook) matrix.
-3. If the minimum is larger than threshold, the window is detected as anomaly.
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/som_detect.png">
-</p>
+- Average distances
+- Clustering
 
 #### Threshold by statistical distribution quantiles
 
@@ -168,11 +163,16 @@ The algorithm requires computing *distance between matrices* - input matrix and 
     <img width="70%" height="43.26%" src="docs/ztest_detect.png">
 </p>
 
-#### Inverse SOM
+#### Central limit theorem
 
-1. Apply Online data set to codebook matrices
-2. Map codebooks to SOM
-3. Detect *empty grids* (online windows) as anomalies 
+To know some window, i.e. an observation in the tensor is anomaly,
+
+1. Compute every distance versus codebook matrix and average.
+2. If the SomAnomaly statistic is larger than .90 Z-quantile, the window is detected as anomaly. 
+
+<p align="center">
+    <img width="70%" height="43.26%" src="docs/som_clt.png">
+</p>
 
 #### 2-means clustering
 
@@ -189,13 +189,3 @@ Perform 2-means clustering for codebook matrices and online data-set.
 
 Perform divisive hierarchical clustering for codebook matrices and online data-set.
 Treat codebook matrices as one group at the beginning, and use average linkage.
-
-#### Threshold by distances between nodes
-
-1. Project online data-set onto normal SOM.
-2. Compute distance between projection and normal projection.
-3. If the online projection is *not in the neighborhood of normal projection*, the window is detected as anomaly.
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/radius_detect.png">
-</p>
