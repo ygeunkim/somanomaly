@@ -277,7 +277,6 @@ class SomDetect:
             )
             # test level - bonferroni correction = alpha / N
             alpha = 1 - chi_opt
-            # alpha /= self.net.shape[0]
             alpha /= self.som_te.window_data.shape[0]
             # Benjamini–Hochberg - i * alpha / N for ordered p-value
             alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
@@ -427,7 +426,7 @@ class SomDetect:
                 [self.dist_mat(codebook[node, :, :], resample[i, :, :]) for i in tqdm(range(n), desc = "mean and sd")]
             )
             dist_moment[b, 0] = np.average(dist_b)
-            dist_moment[b, 1] = np.std(dist_b)
+            dist_moment[b, 1] = np.var(dist_b)
         return np.average(dist_moment, axis = 0)
 
     def dist_mat(self, mat1, mat2):
@@ -642,6 +641,7 @@ def main(argv):
                                                     {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                                                     {-k} <subset_net>
                                                     {-l} <label> {-m} <threshold>
+                                                    {-b} <boot_num> {-u}
                                                     {-1} {-2} {-3}
         """
         print(usage_message)
@@ -690,7 +690,10 @@ Detecting anomalies (option):
                 Default = 1,0
             -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, unitkmeans, testerr, clt, or cltlind
                 Default = cltlind
-                Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile. 
+                Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile.
+            -b: bootstrap sample number for clt and cltlind
+                Default = 1
+            -u: use only mapped codebook for clt and cltlind
 Plot if specified:
             -1: plot reconstruction error path
             -2: plot heatmap of SOM
