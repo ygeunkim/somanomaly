@@ -98,13 +98,14 @@ class SomDetect:
         else:
             self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
 
-    def detect_anomaly(self, label = None, threshold = "quantile", chi_opt = .9, bootstrap = 1, clt_map = False):
+    def detect_anomaly(self, label = None, threshold = "quantile", chi_opt = .9, bootstrap = 1, clt_map = False, neighbor = None):
         """
         :param label: anomaly and normal label list
         :param threshold: threshold for detection - quantile, radius, mean, or inv_som
         :param chi_opt: what number chi-squared quantile to use. Change this only when ztest threshold
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
+        :param neighbor: radius - use neighboring nodes when clt_map
         :return: Anomaly detection
         """
         if label is None:
@@ -257,8 +258,17 @@ class SomDetect:
                     )
                     self.som_grid.dist_normal = normal_distance[:, 0]
                     self.som_grid.project = normal_distance[:, 1]
-                # mapped codebook
+                # mapped nodes
                 normal_project, proj_count = np.unique(self.som_grid.project, return_counts = True)
+                # neighboring nodes
+                if neighbor is not None:
+                    proj_dist = np.argwhere(
+                        self.som_grid.dci[normal_project.astype(int), :] <= neighbor
+                    )
+                    normal_project, neighbor_count = np.unique(proj_dist[:, 0], return_counts = True)
+                    proj_count = np.repeat(proj_count, neighbor_count)
+                    normal_project = np.unique(proj_dist[:, 1])
+                # corresponding codebook
                 net_stand = self.net[normal_project.astype(int), :, :]
             else:
                 net_stand = self.net
@@ -605,6 +615,7 @@ def main(argv):
     threshold_list = None
     boot = 1
     proj = False
+    neighbor_node = None
     # print_eval
     print_eval = False
     target_names = ["anomaly", "normal"]
@@ -614,7 +625,7 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:b:ue:a:r:k:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:b:uv:e:a:r:k:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "True label file",
@@ -694,6 +705,8 @@ Detecting anomalies (option):
             -b: bootstrap sample number for clt and cltlind
                 Default = 1
             -u: use only mapped codebook for clt and cltlind
+            -v: when using mapped codebook, neighboring nodes also can be used
+                Default = None (do not use)
 Plot if specified:
             -1: plot reconstruction error path
             -2: plot heatmap of SOM
@@ -747,6 +760,8 @@ Plot if specified:
             boot = int(arg)
         elif opt in ("-u"):
             proj = True
+        elif opt in ("-v"):
+            neighbor_node = int(arg)
         elif opt in ("-e"):
             epoch = int(arg)
             subset_net = epoch
@@ -767,7 +782,8 @@ Plot if specified:
                             window_size, jump_size,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
-    som_anomaly.detect_anomaly(label = label, threshold = threshold, chi_opt = ztest_opt, bootstrap = boot, clt_map = proj)
+    som_anomaly.detect_anomaly(label = label, threshold = threshold,
+                               chi_opt = ztest_opt, bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
