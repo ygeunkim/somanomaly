@@ -761,7 +761,7 @@ Plot if specified:
         elif opt in ("-u"):
             proj = True
         elif opt in ("-v"):
-            neighbor_node = int(arg)
+            neighbor_node = float(arg)
         elif opt in ("-e"):
             epoch = int(arg)
             subset_net = epoch
