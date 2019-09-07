@@ -98,11 +98,12 @@ class SomDetect:
         else:
             self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
 
-    def detect_anomaly(self, label = None, threshold = "quantile", chi_opt = .9, bootstrap = 1, clt_map = False, neighbor = None):
+    def detect_anomaly(self, label = None, threshold = "quantile", level = .9, mfdr = None, bootstrap = 1, clt_map = False, neighbor = None):
         """
         :param label: anomaly and normal label list
         :param threshold: threshold for detection - quantile, radius, mean, or inv_som
-        :param chi_opt: what number chi-squared quantile to use. Change this only when ztest threshold
+        :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
+        :param mfdr: eta of alpha-investing
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
         :param neighbor: radius - use neighboring nodes when clt_map
@@ -211,7 +212,7 @@ class SomDetect:
                         )
                     ) for i in tqdm(range(te_stand.shape[0]), desc = "online repeat")]
                 )
-                som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
+                som_anomaly = dist_anomaly > chi2.ppf(level, self.som_te.window_data.shape[1])
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -249,7 +250,7 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            som_anomaly = dist_anomaly > chi2.ppf(chi_opt, self.som_te.window_data.shape[1])
+            som_anomaly = dist_anomaly > chi2.ppf(level, self.som_te.window_data.shape[1])
         elif threshold == "clt" or threshold == "cltlind":
             if clt_map:
                 if self.som_grid.project is None:
@@ -286,10 +287,15 @@ class SomDetect:
                 [self.dist_codebook(net_stand, k, w = proj_count) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
             # test level - bonferroni correction = alpha / N
-            alpha = 1 - chi_opt
-            alpha /= self.som_te.window_data.shape[0]
+            # alpha = 1 - level
+            # alpha /= self.som_te.window_data.shape[0]
             # Benjamini–Hochberg - i * alpha / N for ordered p-value
-            alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
+            # alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
+            # alpha-investing
+            alpha = 1 - level
+            if mfdr is None:
+                mfdr = 1 - alpha
+            wealth = alpha * mfdr
             if threshold == "clt":
                 # mu = mean(mu1, ..., muN)
                 clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
@@ -301,33 +307,35 @@ class SomDetect:
                 ) / net_stand.shape[0]
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
                 dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
-                # H1 D > 0
-                # som_anomaly = 1 - norm.cdf(dstat) <= alpha
-                # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
-                # 2 reject every H(j), j = 1, ..., k
-                pvalue = 1 - norm.cdf(dstat)
-                p_ordered = np.argsort(pvalue)
-                test = np.argwhere(pvalue[p_ordered] <= alpha)
-                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
-                if test.shape[0] != 0:
-                    test_k = np.max(test)
-                    som_anomaly[p_ordered[:(test_k + 1)]] = True
-            elif threshold == "cltlind":
+            else:
                 clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
                 sn = np.sqrt(
                     np.sum(normal_distance[:, 1] * proj_count)
                 )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
-                # som_anomaly = 1 - norm.cdf(dstat) <= alpha
-                # Benjamini–Hochberg
-                pvalue = 1 - norm.cdf(dstat)
-                p_ordered = np.argsort(pvalue)
-                test = np.argwhere(pvalue[p_ordered] <= alpha)
-                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
-                if test.shape[0] != 0:
-                    test_k = np.max(test)
-                    som_anomaly[p_ordered[:(test_k + 1)]] = True
+            pvalue = 1 - norm.cdf(dstat)
+            # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
+            # 2 reject every H(j), j = 1, ..., k
+            # p_ordered = np.argsort(pvalue)
+            # test = np.argwhere(pvalue[p_ordered] <= alpha)
+            # som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
+            # if test.shape[0] != 0:
+            #     test_k = np.max(test)
+            #     som_anomaly[p_ordered[:(test_k + 1)]] = True
+            som_anomaly = True
+            k = 0
+            for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
+                h0 = j + 1
+                alphaj = wealth / (1 + h0 - k)
+                if pvalue[j] <= alphaj:
+                    som_anomaly = np.append(som_anomaly, True)
+                    wealth = wealth + alpha
+                    k = h0
+                else:
+                    som_anomaly = np.append(som_anomaly, False)
+                    wealth = wealth - alphaj / (1 - alphaj)
+            som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
             if bootstrap == 1:
                 normal_distance = np.asarray(
@@ -355,7 +363,7 @@ class SomDetect:
             )
             # (dbar - sec * sqrt((a-1) * F(a-1, N-a), dbar - sec * sqrt((a-1) * F(a-1, N-a))
             dstat = (dist_anomaly - pop_mean) / std_err
-            som_anomaly = dstat >= np.sqrt((trt - 1) * f.ppf(chi_opt, trt - 1, num - trt))
+            som_anomaly = dstat >= np.sqrt((trt - 1) * f.ppf(level, trt - 1, num - trt))
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -783,7 +791,7 @@ Plot if specified:
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
     som_anomaly.detect_anomaly(label = label, threshold = threshold,
-                               chi_opt = ztest_opt, bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
+                               level = ztest_opt, bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
