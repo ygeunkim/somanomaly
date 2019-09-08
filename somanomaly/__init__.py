@@ -135,7 +135,7 @@ class kohonen:
             )
         # learning rate
         if init_rate is None:
-            init_rate = .5
+            init_rate = .1
         self.alpha = init_rate
         self.initial_learn = init_rate
         # radius of neighborhood
@@ -194,7 +194,6 @@ class kohonen:
         elif self.dist_func == "mahalanobis":
             x = data[index, :, :] - self.net[node, :, :]
             covmat = np.cov(x, rowvar = False)
-            # ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
             # spectral decomposition sigma = udu.T
             w, v = np.linalg.eigh(covmat)
             # inverse = ud^-1u.T
@@ -206,7 +205,6 @@ class kohonen:
             x = data[index, :, :] - self.net[node, :, :]
             covmat = np.cov(x, rowvar = False)
             # svd(covariance)
-            # u, s, vh = np.linalg.svd(covmat, full_matrices = False)
             u, s, vh = randomized_svd(covmat, n_components = covmat.shape[1], n_iter = 1, random_state = None)
             # normalize eigenvalue
             w = s / s.sum()

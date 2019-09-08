@@ -80,7 +80,6 @@ class SomDetect:
         self.d = dist
         self.decay = decay
         # plot
-        # self.project = np.empty(self.som_te.window_data.shape[0])
         self.project = None
 
     def learn_normal(self, epoch = 100, init_rate = None, init_radius = None, subset_net = 100):
@@ -98,11 +97,16 @@ class SomDetect:
         else:
             self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
 
-    def detect_anomaly(self, label = None, threshold = "quantile", level = .9, mfdr = None, bootstrap = 1, clt_map = False, neighbor = None):
+    def detect_anomaly(
+            self, label = None, threshold = "cltlind",
+            level = .9, clt_test = "bh", mfdr = None,
+            bootstrap = 1, clt_map = False, neighbor = None
+    ):
         """
         :param label: anomaly and normal label list
-        :param threshold: threshold for detection - quantile, radius, mean, or inv_som
+        :param threshold: threshold for detection - mean, quantile, radius, kmeans, ztest, clt, cltlind, or anova
         :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
+        :param clt_test: what multiple testing method to use for clt and cltlind - bh or online
         :param mfdr: eta of alpha-investing
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
@@ -117,15 +121,18 @@ class SomDetect:
         thr_types = [
             "quantile", "radius", "mean", "inv_som",
             "kmeans", "hclust",
-            "ztest", "unitkmeans", "testerr",
-            "ztest_proj", "clt", "cltlind",
+            "ztest",
+            "clt", "cltlind",
             "anova"
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
+        test_types = ["bh", "online"]
+        if clt_test not in test_types:
+            raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
         # threshold with mapping
-        if threshold == "quantile" or threshold == "mean" or threshold == "radius" or threshold == "unitkmeans" or threshold == "testerr" or threshold == "ztest_proj":
+        if threshold == "quantile" or threshold == "mean" or threshold == "radius":
             anomaly_threshold = None
             dist_anomaly = None
             # normal data
@@ -150,7 +157,7 @@ class SomDetect:
                 anomaly_threshold = np.mean(self.som_grid.dist_normal)
                 som_anomaly = dist_anomaly > anomaly_threshold
             elif threshold == "radius":
-                anomaly_threshold = self.som_grid.initial_r
+                anomaly_threshold = neighbor
                 normal_project = np.unique(self.som_grid.project)
                 from_normal = self.som_grid.dci[normal_project.astype(int), :]
                 anomaly_project = np.full(
@@ -162,57 +169,6 @@ class SomDetect:
                     anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
                 anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
                 som_anomaly = np.isin(self.project, anomaly_node)
-            elif threshold == "unitkmeans":
-                normal_net = self.net[self.som_grid.project.astype(int), :, :]
-                online_net = self.net[self.project.astype(int), :, :]
-                cluster = np.random.choice(np.arange(2), online_net.shape[0])
-                cluster_change = cluster + 1
-                centroid1 = np.empty((normal_net.shape[1], normal_net.shape[2]))
-                centroid2 = centroid1
-                while not np.array_equal(cluster, cluster_change):
-                    normal_array = np.append(
-                        normal_net, online_net[cluster == 0, :, :], axis = 0
-                    )
-                    anom_array = online_net[cluster == 1, :, :]
-                    centroid1 = np.mean(normal_array, axis = 0)
-                    centroid2 = np.mean(anom_array, axis = 0)
-                    cluster_change = cluster
-                    for i in range(online_net.shape[0]):
-                        dist1 = self.dist_mat(online_net[i, :, :], centroid1)
-                        dist2 = self.dist_mat(online_net[i, :, :], centroid2)
-                        if dist1 <= dist2:
-                            cluster[i] = 0
-                        else:
-                            cluster[i] = 1
-                    som_anomaly = np.full(online_net.shape[0], fill_value = False, dtype = bool)
-                    som_anomaly[cluster == 0] = True
-            elif threshold == "testerr":
-                normal_err = self.som_grid.reconstruction_error["Reconstruction Error"].to_numpy()
-                test_err = np.square(dist_anomaly)
-                som_anomaly = test_err > (normal_err[self.som_grid.epoch - 1] / self.som_tr.window_data.shape[0])
-            elif threshold == "ztest_proj":
-                normal_project = np.unique(self.som_grid.project)
-                net_stand = self.net[normal_project.astype(int), :, :]
-                # standardize codebook otherwise input standardized
-                if not self.standard:
-                    net_tmp = net_stand.reshape((-1, net_stand.shape[2]))
-                    scaler = StandardScaler()
-                    net_stand = scaler.fit_transform(net_tmp).reshape(net_stand.shape)
-                # anomaly_project = np.unique(self.project)
-                te_stand = self.net[self.project.astype(int), :, :]
-                if not self.standard:
-                    net_tmp = te_stand.reshape((-1, te_stand.shape[2]))
-                    scaler = StandardScaler()
-                    te_stand = scaler.fit_transform(net_tmp).reshape(te_stand.shape)
-                # mapped net of normal vs mapped net of online
-                dist_anomaly = np.asarray(
-                    [np.average(
-                        np.asarray(
-                            [self.dist_mat(te_stand[i, :, :], net_stand[j, :, :]) for j in tqdm(range(net_stand.shape[0]), desc="versus normal mapped")]
-                        )
-                    ) for i in tqdm(range(te_stand.shape[0]), desc = "online repeat")]
-                )
-                som_anomaly = dist_anomaly > chi2.ppf(level, self.som_te.window_data.shape[1])
         # threshold without mapping
         if threshold == "inv_som":
             som_anomaly = self.inverse_som()
@@ -286,16 +242,6 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k, w = proj_count) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            # test level - bonferroni correction = alpha / N
-            # alpha = 1 - level
-            # alpha /= self.som_te.window_data.shape[0]
-            # Benjamini–Hochberg - i * alpha / N for ordered p-value
-            # alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
-            # alpha-investing
-            alpha = 1 - level
-            if mfdr is None:
-                mfdr = 1 - alpha
-            wealth = alpha * mfdr
             if threshold == "clt":
                 # mu = mean(mu1, ..., muN)
                 clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
@@ -315,27 +261,38 @@ class SomDetect:
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
             pvalue = 1 - norm.cdf(dstat)
-            # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
-            # 2 reject every H(j), j = 1, ..., k
-            # p_ordered = np.argsort(pvalue)
-            # test = np.argwhere(pvalue[p_ordered] <= alpha)
-            # som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
-            # if test.shape[0] != 0:
-            #     test_k = np.max(test)
-            #     som_anomaly[p_ordered[:(test_k + 1)]] = True
-            som_anomaly = True
-            k = 0
-            for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
-                h0 = j + 1
-                alphaj = wealth / (1 + h0 - k)
-                if pvalue[j] <= alphaj:
-                    som_anomaly = np.append(som_anomaly, True)
-                    wealth = wealth + alpha
-                    k = h0
-                else:
-                    som_anomaly = np.append(som_anomaly, False)
-                    wealth = wealth - alphaj / (1 - alphaj)
-            som_anomaly = som_anomaly[1:]
+            if clt_test == "bh":
+                alpha = 1 - level
+                alpha /= self.som_te.window_data.shape[0]
+                # Benjamini–Hochberg - i * alpha / N for ordered p-value
+                alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
+                # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
+                # 2 reject every H(j), j = 1, ..., k
+                p_ordered = np.argsort(pvalue)
+                test = np.argwhere(pvalue[p_ordered] <= alpha)
+                som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
+                if test.shape[0] != 0:
+                    test_k = np.max(test)
+                    som_anomaly[p_ordered[:(test_k + 1)]] = True
+            else:
+                alpha = 1 - level
+                if mfdr is None:
+                    mfdr = 1 - alpha
+                # alpha-investing
+                wealth = alpha * mfdr
+                som_anomaly = True
+                k = 0
+                for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
+                    h0 = j + 1
+                    alphaj = wealth / (1 + h0 - k)
+                    if pvalue[j] <= alphaj:
+                        som_anomaly = np.append(som_anomaly, True)
+                        wealth = wealth + alpha
+                        k = h0
+                    else:
+                        som_anomaly = np.append(som_anomaly, False)
+                        wealth = wealth - alphaj / (1 - alphaj)
+                som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
             if bootstrap == 1:
                 normal_distance = np.asarray(
@@ -460,7 +417,6 @@ class SomDetect:
             return np.linalg.norm(x, "nuc")
         elif self.som_grid.dist_func == "mahalanobis":
             covmat = np.cov(x, rowvar = False)
-            # ss = x.dot(np.linalg.inv(covmat)).dot(x.T)
             w, v = np.linalg.eigh(covmat)
             w[w == 0] += .0001
             covinv = v.dot(np.diag(1 / w)).dot(v.T)
@@ -468,7 +424,6 @@ class SomDetect:
             return np.sqrt(np.trace(ss))
         elif self.som_grid.dist_func == "eros":
             covmat = np.cov(x, rowvar = False)
-            # u, s, vh = np.linalg.svd(covmat, full_matrices = False)
             u, s, vh = randomized_svd(covmat, n_components = covmat.shape[1], n_iter = 1, random_state = None)
             w = s / s.sum()
             ss = np.multiply(vh, w).dot(vh.T)
@@ -557,8 +512,6 @@ class SomDetect:
     def label_anomaly(self):
         win_size = self.win_size
         jump_size = self.jump
-        # win_size = self.som_te.window_data.shape[1]
-        # jump_size = (self.som_te.n - win_size) // (self.som_te.window_data.shape[0] - 1)
         # first assign by normal
         self.anomaly = np.repeat(self.label[1], self.anomaly.shape[0])
         for i in tqdm(range(self.window_anomaly.shape[0]), desc = "anomaly unit change"):
@@ -622,6 +575,9 @@ def main(argv):
     ztest_opt = .9
     threshold_list = None
     boot = 1
+    multiple_test = "bh"
+    eta = None
+    multiple_list = None
     proj = False
     neighbor_node = None
     # print_eval
@@ -633,7 +589,7 @@ def main(argv):
     print_heat = False
     print_projection = False
     try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:b:uv:e:a:r:k:123",
+        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:b:uv:q:e:a:r:k:123",
                                    ["help",
                                     "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
                                     "True label file",
@@ -645,6 +601,8 @@ def main(argv):
                                     "Decay=(default:exponential)",
                                     "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
                                     "Bootstrap for clt", "Use only mapped codebook matrix for clt or cltlind",
+                                    "Mapped codebook matrices and their neighboring nodes",
+                                    "Multiple testing options for clt and cltlind=(default:bh)",
                                     "Epoch number=(default:50)",
                                     "Initial learning rate=(default:0.5)", "Initial radius=(default:function)",
                                     "Subset weight matrix among epochs=(default:50)",
@@ -660,7 +618,7 @@ def main(argv):
                                                     {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
                                                     {-k} <subset_net>
                                                     {-l} <label> {-m} <threshold>
-                                                    {-b} <boot_num> {-u}
+                                                    {-b} <boot_num> {-u} {-v} <neighbor_radius> {-q} <multiple_test>
                                                     {-1} {-2} {-3}
         """
         print(usage_message)
@@ -699,7 +657,7 @@ Training SOM (option):
             -e: epoch number
                 Default = 50
             -a: initial learning ratio
-                Default = 0.5
+                Default = 0.1
             -r: initial radius of BMU neighborhood
                 Default = 2/3 quantile of every distance between nodes
             -k: subset weight matrix among epochs
@@ -707,7 +665,7 @@ Training SOM (option):
 Detecting anomalies (option):
             -l: anomaly and normal label
                 Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, unitkmeans, testerr, clt, or cltlind
+            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, clt, or cltlind
                 Default = cltlind
                 Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile.
             -b: bootstrap sample number for clt and cltlind
@@ -715,6 +673,8 @@ Detecting anomalies (option):
             -u: use only mapped codebook for clt and cltlind
             -v: when using mapped codebook, neighboring nodes also can be used
                 Default = None (do not use)
+            -q: multiple testing method for clt and cltlind - bh or online
+                Default = bh
 Plot if specified:
             -1: plot reconstruction error path
             -2: plot heatmap of SOM
@@ -770,6 +730,13 @@ Plot if specified:
             proj = True
         elif opt in ("-v"):
             neighbor_node = float(arg)
+        elif opt in ("-q"):
+            if str(arg).strip().find(",") != -1:
+                multiple_list = str(arg).strip().split(",")
+                multiple_test = multiple_list[0]
+                eta = float(multiple_list[1])
+            else:
+                multiple_test = arg
         elif opt in ("-e"):
             epoch = int(arg)
             subset_net = epoch
@@ -791,7 +758,8 @@ Plot if specified:
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
     som_anomaly.detect_anomaly(label = label, threshold = threshold,
-                               level = ztest_opt, bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
+                               level = ztest_opt, clt_test = multiple_test, mfdr = eta,
+                               bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
@@ -815,6 +783,11 @@ Plot if specified:
         print("Anomaly detection by %s of %.3f" %(threshold, ztest_opt))
     else:
         print("Anomaly detection by ", threshold)
+    if threshold == "clt" or threshold == "cltlind":
+        if multiple_list is not None:
+            print("with multiple testing %s of %.3f" %(multiple_test, eta))
+        else:
+            print("with multiple testing %s" % multiple_test)
     print("==========================================")
     # evaluation
     if print_eval:

@@ -32,7 +32,9 @@ python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
                         {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
                         {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay>
                         {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
+                        {-k} <subset_net>
                         {-l} <label> {-m} <threshold>
+                        {-b} <boot_num> {-u} {-v} <neighbor_radius> {-q} <multiple_test>
                         {-1} {-2} {-3}
 ```
 
@@ -98,7 +100,7 @@ So all these are optional arguments.
 -g  Decaying function - exponential (default) or linear
 -s  Random seed (Default = system time)
 -e  Epoch number (Default = 50)
--a  Initial learning rate (Default = 0.5)
+-a  Initial learning rate (Default = 0.1)
 -r  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
 -k  Subset weight matrix set among epochs (Default = epoch number)
 ```
@@ -111,7 +113,16 @@ So all these are optional arguments.
 ```
 
 In case of `ztest` or `ztest_proj` of `-m`, you can specify quantile simultaneously. The default is `.9`.
-If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantile. 
+If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantile.
+
+The following are additional arguments that can adjust `clt` and `cltlind` thresholds.
+
+```
+-b  Bootstrap sample numbers (Default = 1, bootstrap not performed)
+-u  Use only mapped codebook if specified
+-v  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
+-q  Multiple testing method - bh (default) or online
+``` 
 
 #### Plot
 
@@ -153,22 +164,13 @@ Using **distances from codebook matrices**, think the windows that have large di
 - Average distances
 - Clustering
 
-#### Threshold by statistical distribution quantiles
-
-1. Standardize every weight (codebook) matrix w.r.t. variable.
-2. Compute each distance between codebook matrix.
-3. If the average is larger than .90 chi-squared quantile, the window is detected as anomaly.
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/ztest_detect.png">
-</p>
-
 #### Central limit theorem
 
 To know some window, i.e. an observation in the tensor is anomaly,
 
 1. Compute every distance versus codebook matrix and average.
-2. If the SomAnomaly statistic is larger than .90 Z-quantile, the window is detected as anomaly. 
+2. If the SomAnomaly statistic is larger than Z-quantile, the window is detected as anomaly.
+3. Statistical test for each window is conducted, so we correct the significance level appropriately. 
 
 <p align="center">
     <img width="70%" height="43.26%" src="docs/som_clt.png">
@@ -184,8 +186,3 @@ Perform 2-means clustering for codebook matrices and online data-set.
     1. For each cluster, compute centroid.
     2. Compute distance between centroid and every online matrix.
     3. Assign each online observation matrix to the group with smaller distance.
-
-#### Divisive hierarchical clustering
-
-Perform divisive hierarchical clustering for codebook matrices and online data-set.
-Treat codebook matrices as one group at the beginning, and use average linkage.
