@@ -280,7 +280,6 @@ class SomDetect:
                     mfdr = 1 - alpha
                 # alpha-investing
                 wealth = alpha * mfdr
-                # wealth = alpha
                 som_anomaly = True
                 k = 0
                 for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
@@ -288,7 +287,8 @@ class SomDetect:
                     alphaj = wealth / (1 + h0 - k)
                     rj = pvalue[j] <= alphaj # boolean - 1 if reject, 0 if accept
                     som_anomaly = np.append(som_anomaly, rj)
-                    wealth = wealth - (1 - rj) * alphaj / (1 - alphaj) + rj * alpha
+                    wealth += - (1 - rj) * alphaj / (1 - alphaj) + rj * alpha
+                    # wealth += (1 - rj) * np.log(1 - alphaj) + rj * (alpha + np.log(1 - pvalue[j]))
                     k = (1 - rj) * k + rj * h0 # the most recently rejected hypothesis
                 som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
