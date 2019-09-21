@@ -127,7 +127,7 @@ class SomDetect:
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        test_types = ["bh", "online"]
+        test_types = ["bh", "invest"]
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
@@ -274,24 +274,22 @@ class SomDetect:
                 if test.shape[0] != 0:
                     test_k = np.max(test)
                     som_anomaly[p_ordered[:(test_k + 1)]] = True
-            else:
+            elif clt_test == "invest":
                 alpha = 1 - level
                 if mfdr is None:
                     mfdr = 1 - alpha
                 # alpha-investing
                 wealth = alpha * mfdr
+                # wealth = alpha
                 som_anomaly = True
                 k = 0
                 for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
                     h0 = j + 1
                     alphaj = wealth / (1 + h0 - k)
-                    if pvalue[j] <= alphaj:
-                        som_anomaly = np.append(som_anomaly, True)
-                        wealth = wealth + alpha
-                        k = h0
-                    else:
-                        som_anomaly = np.append(som_anomaly, False)
-                        wealth = wealth - alphaj / (1 - alphaj)
+                    rj = pvalue[j] <= alphaj # boolean - 1 if reject, 0 if accept
+                    som_anomaly = np.append(som_anomaly, rj)
+                    wealth = wealth - (1 - rj) * alphaj / (1 - alphaj) + rj * alpha
+                    k = (1 - rj) * k + rj * h0 # the most recently rejected hypothesis
                 som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
             if bootstrap == 1:
@@ -673,7 +671,7 @@ Detecting anomalies (option):
             -u: use only mapped codebook for clt and cltlind
             -v: when using mapped codebook, neighboring nodes also can be used
                 Default = None (do not use)
-            -q: multiple testing method for clt and cltlind - bh or online
+            -q: multiple testing method for clt and cltlind - bh or invest
                 Default = bh
 Plot if specified:
             -1: plot reconstruction error path
@@ -769,6 +767,8 @@ Plot if specified:
     print("SOM parameters----------------------------")
     if som_anomaly.standard:
         print("Standardized!")
+    print("Initial learning rate: ", som_anomaly.som_grid.initial_learn)
+    print("Initial radius: ", som_anomaly.som_grid.initial_r)
     print("[Window, jump]: ", [som_anomaly.win_size, som_anomaly.jump])
     print("SOM grid: ", som_anomaly.som_grid.net_dim)
     print("Topology: ", som_anomaly.som_grid.topo)

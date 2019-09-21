@@ -121,7 +121,7 @@ The following are additional arguments that can adjust `clt` and `cltlind` thres
 -b  Bootstrap sample numbers (Default = 1, bootstrap not performed)
 -u  Use only mapped codebook if specified
 -v  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
--q  Multiple testing method - bh (default) or online
+-q  Multiple testing method - bh (default) or invest
 ``` 
 
 #### Plot
