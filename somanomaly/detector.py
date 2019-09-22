@@ -99,15 +99,16 @@ class SomDetect:
 
     def detect_anomaly(
             self, label = None, threshold = "cltlind",
-            level = .9, clt_test = "bh", mfdr = None,
+            level = .9, clt_test = "bh", mfdr = None, power = None,
             bootstrap = 1, clt_map = False, neighbor = None
     ):
         """
         :param label: anomaly and normal label list
         :param threshold: threshold for detection - mean, quantile, radius, kmeans, ztest, clt, cltlind, or anova
         :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
-        :param clt_test: what multiple testing method to use for clt and cltlind - bh or online
+        :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, or gai
         :param mfdr: eta of alpha-investing
+        :param power: rho of GAI
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
         :param neighbor: radius - use neighboring nodes when clt_map
@@ -127,7 +128,7 @@ class SomDetect:
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        test_types = ["bh", "invest"]
+        test_types = ["bh", "invest", "gai"]
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
@@ -290,6 +291,29 @@ class SomDetect:
                     wealth += - (1 - rj) * alphaj / (1 - alphaj) + rj * alpha
                     # wealth += (1 - rj) * np.log(1 - alphaj) + rj * (alpha + np.log(1 - pvalue[j]))
                     k = (1 - rj) * k + rj * h0 # the most recently rejected hypothesis
+                som_anomaly = som_anomaly[1:]
+            elif clt_test == "gai":
+                alpha = 1 - level
+                # upper bound on the power
+                if power is None:
+                    power = 1
+                if mfdr is None:
+                    mfdr = 1 - alpha
+                # W(0)
+                wealth = alpha * mfdr
+                som_anomaly = True
+                for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "gai"):
+                    # relative200 scheme - phi(k) = w(k - 1) / 10, k = 1, 2, ...
+                    phi = wealth / 10
+                    # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
+                    # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
+                    alphaj = (phi * power) / (phi + power)
+                    rj = pvalue[j] <= alphaj
+                    som_anomaly = np.append(som_anomaly, rj)
+                    # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
+                    psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
+                    # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
+                    wealth += -phi + rj * psi
                 som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
             if bootstrap == 1:
@@ -575,6 +599,7 @@ def main(argv):
     boot = 1
     multiple_test = "bh"
     eta = None
+    rho = None
     multiple_list = None
     proj = False
     neighbor_node = None
@@ -671,7 +696,7 @@ Detecting anomalies (option):
             -u: use only mapped codebook for clt and cltlind
             -v: when using mapped codebook, neighboring nodes also can be used
                 Default = None (do not use)
-            -q: multiple testing method for clt and cltlind - bh or invest
+            -q: multiple testing method for clt and cltlind - bh, invest, or gai
                 Default = bh
 Plot if specified:
             -1: plot reconstruction error path
@@ -732,7 +757,16 @@ Plot if specified:
             if str(arg).strip().find(",") != -1:
                 multiple_list = str(arg).strip().split(",")
                 multiple_test = multiple_list[0]
-                eta = float(multiple_list[1])
+                if str(multiple_list[1]).strip().find("+") != -1:
+                    multiple_opt = str(multiple_list[1]).strip().split("+")
+                    eta = float(multiple_opt[0])
+                    rho = float(multiple_opt[1])
+                else:
+                    eta = float(multiple_list[1])
+            elif str(arg).strip().find("+") != -1:
+                multiple_list = str(arg).strip().split("+")
+                multiple_test = multiple_list[0]
+                rho = float(multiple_list[1])
             else:
                 multiple_test = arg
         elif opt in ("-e"):
@@ -756,7 +790,7 @@ Plot if specified:
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
     som_anomaly.detect_anomaly(label = label, threshold = threshold,
-                               level = ztest_opt, clt_test = multiple_test, mfdr = eta,
+                               level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho,
                                bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
@@ -785,7 +819,11 @@ Plot if specified:
         print("Anomaly detection by ", threshold)
     if threshold == "clt" or threshold == "cltlind":
         if multiple_list is not None:
-            print("with multiple testing %s of %.3f" %(multiple_test, eta))
+            if eta is not None:
+                if rho is not None:
+                    print("with multiple testing %s of %.3f and %.3f" % (multiple_test, eta, rho))
+                else:
+                    print("with multiple testing %s of %.3f" %(multiple_test, eta))
         else:
             print("with multiple testing %s" % multiple_test)
     print("==========================================")
