@@ -121,8 +121,15 @@ The following are additional arguments that can adjust `clt` and `cltlind` thres
 -b  Bootstrap sample numbers (Default = 1, bootstrap not performed)
 -u  Use only mapped codebook if specified
 -v  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
--q  Multiple testing method - bh (default) or invest
+-q  Multiple testing method - bh (default), invest, or gai
 ``` 
+
+Both `invest` and `gai` have option for the detector. See each
+
+- *Foster, D. P., & Stine, R. A. (2008). α‐investing: a procedure for sequential control of expected false discoveries. Journal of the Royal Statistical Society Series B-Statistical Methodology, 70(2), 429–444. http://doi.org/10.1111/j.1467-9868.2007.00643.x*
+- *Aharoni, E., & Rosset, S. (2014). Generalized α‐investing: definitions, optimality results and application to public databases. Journal of the Royal Statistical Society Series B-Statistical Methodology, 76(4), 771–794. http://doi.org/10.1111/rssb.12048*
+
+`invest,number` or `gai,number` will control an *eta* in mFDR. Additionally, `gai+number` will control the upper bound of power for `gai` (Generalized alpha-investing).
 
 #### Plot
 
