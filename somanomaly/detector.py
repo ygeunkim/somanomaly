@@ -253,15 +253,15 @@ class SomDetect:
                     )
                 ) / net_stand.shape[0]
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
-                dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
+                self.dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
             else:
                 clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
                 sn = np.sqrt(
                     np.sum(normal_distance[:, 1] * proj_count)
                 )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
-                dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
-            pvalue = 1 - norm.cdf(dstat)
+                self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
+            pvalue = 1 - norm.cdf(self.dstat)
             if clt_test == "bh":
                 alpha = 1 - level
                 alpha /= self.som_te.window_data.shape[0]
@@ -575,6 +575,8 @@ def main(argv):
     normal_file = ""
     online_file = ""
     output_file = ""
+    output_list = None
+    dstat_file = None
     cols = None
     # training arguments
     standard = False
@@ -710,7 +712,12 @@ Plot if specified:
         elif opt in ("-o"):
             online_file = arg
         elif opt in ("-p"):
-            output_file = arg
+            if str(arg).strip().find(",") != -1:
+                output_list = str(arg).strip().split(",")
+                output_file = output_list[0]
+                dstat_file = output_list[1]
+            else:
+                output_file = arg
         elif opt in ("-c"):
             cols = str(arg).strip().split(',')
             cols = range(int(cols[0]), int(cols[1]))
@@ -795,6 +802,11 @@ Plot if specified:
     som_anomaly.label_anomaly()
     anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
     anomaly_df.to_csv(output_file, index = False, header = False)
+    if dstat_file is not None:
+        dstat_df = pd.DataFrame({".som": som_anomaly.dstat})
+        dstat_df.to_csv(dstat_file, index = False, header = False)
+        window_df = pd.DataFrame({".pred": som_anomaly.window_anomaly})
+        window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
     print("")
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # print parameter
