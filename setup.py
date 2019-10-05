@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="SomAnomaly",
-    version="0.0.3",
+    version="0.1.0",
     author="Young Geun Kim",
     author_email="dudrms33@g.skku.edu",
     description="Anomaly detection using self-organizing maps",
@@ -25,5 +25,5 @@ setuptools.setup(
         "Self-Organizing Maps",
         "Anomaly Detection"
     ],
-    install_requires=["numpy", "scipy", "pandas", "plotly", "matplotlib", "scikit-learn", "tqdm"]
+    install_requires=["numpy", "scipy", "pandas", "plotly", "matplotlib", "scikit-learn", "tqdm", "argparse"]
 )

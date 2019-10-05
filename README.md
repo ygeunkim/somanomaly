@@ -27,33 +27,30 @@ In command line, you can run *Online SOM detector* using `somanomaly/detector.py
 
 ```
 cd somanomaly
-python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
-                        -p <output_file> {-z} <true_file>
-                        {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
-                        {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay>
-                        {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
-                        {-k} <subset_net>
-                        {-l} <label> {-m} <threshold>
-                        {-b} <boot_num> {-u} {-v} <neighbor_radius> {-q} <multiple_test>
-                        {-1} {-2} {-3}
+python detector.py [-h] [-c COLUMN] [-e EVAL] [--standardize] [-w WINDOW]
+                   [-j JUMP] [-x XGRID] [-y YGRID] [-p PROTOTYPE]
+                   [-n NEIGHBORHOOD] [-m METRIC] [-d DECAY] [-s SEED]
+                   [-i ITER] [-a ALPHA] [-r RADIUS] [--subset SUBSET]
+                   [-l LABEL] [-u THRESHOLD] [-b BOOTSTRAP] [-o] [--find FIND]
+                   [-q MULTIPLE] [-1] [-2] [-3]
+                   normal online output
 ```
 
 The following is a description of each argument.
 
-```
--h, --help  show the help message
-```
+### Positional arguments
 
-### File path
+```
+-h, --help  show the help message and exit
+```
 
 #### Input file
 
 For now, this function reads only `*.csv` files using `pandas.read_csv()`
 
 ```
--n  Normal dataset file
--o  Online dataset file
--c  Column index to read - start,end (Default = every column)
+normal  Normal dataset file
+online  Online dataset file
 ```
 
 Warning: *this function requires exactly same form of both files.
@@ -62,26 +59,38 @@ If you use `-c` option, it will be applied to both normal data set file and onli
 In case of `-c`, follow the python `range(start, end)` function.
 Then the columns from `start + 1` to `end` in the file will be read.
 
+```
+-c  Column index to read - start,end (Default = every column)
+```
+
 #### Output file
 
 ```
--p  Anomaly detection output file
+output  Anomaly detection output file
 ```
 
-This file does not have any column header or row index.
+This file does not have any column header or row index. You can output multiple files using comma.
+
+- anomaly detection
+- SomAnomaly statistic
+- anomaly detection for each window
+
+If you add one more file using comma, two more files will be generated.
+
+### Optional arguments
 
 #### True value
 
 ```
--z  True label file
+-e, --eval  True label file
 ```
 
 If this file is provided, evaluation result (precision, recall, and F1-score) will be printed.
 
-### SOM
+#### SOM
 
 ```
--i  Standardize both data sets if specified
+--standardize  Standardize both data sets
 ```
 
 Options for training and detection have default values, respectively.
@@ -90,26 +99,26 @@ So all these are optional arguments.
 #### Training SOM
 
 ```
--w  Window size (Default = 30)
--j  Shift size (Default = 30)
--x  Number of x-grid (Default = 50)
--y  Number of y-grid (Default = 50)
--t  Topology of SOM output space - hexagonal (default) or rectangular
--f  Neighborhood function - gaussian (default) or bubble
--d  Distance function - frobenius (default), nuclear, mahalanobis, or eros
--g  Decaying function - exponential (default) or linear
--s  Random seed (Default = system time)
--e  Epoch number (Default = 50)
--a  Initial learning rate (Default = 0.1)
--r  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
--k  Subset weight matrix set among epochs (Default = epoch number)
+-w, --window  Window size (Default = 30)
+-j, --jump  Shift size (Default = 30)
+-x, --xgrid  Number of x-grid (Default = 50)
+-y, --ygrid  Number of y-grid (Default = 50)
+-p, --prototype  Topology of SOM output space - hexagonal (default) or rectangular
+-n, --neighborhood  Neighborhood function - gaussian (default), triangular, or bubble
+-m, --metric  Distance function - frobenius (default), nuclear, mahalanobis, or eros
+-d, --decay  Decaying function - exponential (default) or linear
+-s, --seed  Random seed (Default = system time)
+-i, --iter  Epoch number (Default = 50)
+-a, --alpha  Initial learning rate (Default = 0.1)
+-r, --radius  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
+--subset  Subset weight matrix set among epochs (Default = epoch number)
 ```
 
 #### Detecting anomaly
 
 ```
--l  Anomaly and normal labels, e.g. 1,0 (default)
--m  Threshold method - ztest (default), ztest_proj, mean, quantile, radius, inv_som, kmeans, hclust, unitkmeans
+-l, --label  Anomaly and normal labels, e.g. 1,0 (default)
+-u, --threshold  Threshold method - cltlind (default), clt, anova, ztest, mean, quantile, radius, inv_som, kmeans, hclust
 ```
 
 In case of `ztest` or `ztest_proj` of `-m`, you can specify quantile simultaneously. The default is `.9`.
@@ -118,10 +127,10 @@ If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantil
 The following are additional arguments that can adjust `clt` and `cltlind` thresholds.
 
 ```
--b  Bootstrap sample numbers (Default = 1, bootstrap not performed)
--u  Use only mapped codebook if specified
--v  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
--q  Multiple testing method - bh (default), invest, or gai
+-b, --bootstrap  Bootstrap sample numbers (Default = 1, bootstrap not performed)
+-o, --overfit  Use only mapped codebook if specified
+--find  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
+-q, --multiple  Multiple testing method - gai (default), invest, or bh
 ``` 
 
 Both `invest` and `gai` have option for the detector. See each
@@ -136,9 +145,9 @@ Both `invest` and `gai` have option for the detector. See each
 You can see the following plots if writing each parameter.
 
 ```
--1  Plot reconstruction error for each epoch
--2  Plot heatmap of SOM
--3  Plot heatmap of projection onto normal SOM
+-1, --eror  Plot reconstruction error for each epoch
+-2, --heat  Plot heatmap of SOM
+-3, --pred  Plot heatmap of projection onto normal SOM
 ```
 
 ***

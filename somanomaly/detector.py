@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import sys
 import getopt
+import argparse
 import time
 import plotly.graph_objs as go
-import plotly.tools as tls
 import matplotlib.pyplot as plt
 from scipy.stats import chi2
 from scipy.stats import norm
@@ -572,225 +572,235 @@ class SomDetect:
 
 
 def main(argv):
-    normal_file = ""
-    online_file = ""
-    output_file = ""
+    parser = argparse.ArgumentParser()
+    # positional arguments
+    parser.add_argument(
+        "normal",
+        type = str,
+        help = "Normal dataset file"
+    )
+    parser.add_argument(
+        "online",
+        type = str,
+        help = "Streaming dataset file"
+    )
+    parser.add_argument(
+        "output",
+        type = str,
+        help = "Output"
+    )
+    parser.add_argument(
+        "-c", "--column",
+        type = str,
+        help = "Column index to read - start,end"
+    )
+    parser.add_argument(
+        "-e", "--eval",
+        help = "True label dataset file"
+    )
+    # SOM training
+    parser.add_argument(
+        "--standardize",
+        help = "Standardize both data sets",
+        action = "store_true"
+    )
+    parser.add_argument(
+        "-w", "--window",
+        type = int,
+        default = 30,
+        help = "Window size (Default = 30)"
+    )
+    parser.add_argument(
+        "-j", "--jump",
+        type = int,
+        default = 30,
+        help = "Shift size (Default = 30)"
+    )
+    parser.add_argument(
+        "-x", "--xgrid",
+        type = int,
+        default = 50,
+        help = "Number of x-grid (Default = 50)"
+    )
+    parser.add_argument(
+        "-y", "--ygrid",
+        type = int,
+        default = 50,
+        help = "Number of y-grid (Default = 50)"
+    )
+    parser.add_argument(
+        "-p", "--prototype",
+        type = str,
+        default = "hexagonal",
+        help = "Topology of SOM output space - hexagonal (default) or rectangular"
+    )
+    parser.add_argument(
+        "-n", "--neighborhood",
+        type = str,
+        default = "gaussian",
+        help = "Neighborhood function - gaussian (default), triangular, or bubble"
+    )
+    parser.add_argument(
+        "-m", "--metric",
+        type = str,
+        default = "frobenius",
+        help = "Distance function - frobenius (default), nuclear, mahalanobis, or eros"
+    )
+    parser.add_argument(
+        "-d", "--decay",
+        type = str,
+        default = "linear",
+        help = "Decaying function - linear (default) or exponential"
+    )
+    parser.add_argument(
+        "-s", "--seed",
+        type = int,
+        help = "Random seed (Default = system time)"
+    )
+    parser.add_argument(
+        "-i", "--iter",
+        type = int,
+        default = 50,
+        help = "Epoch number (Default = 50)"
+    )
+    parser.add_argument(
+        "-a", "--alpha",
+        type = float,
+        default = .1,
+        help = "Initial learning rate (Default = 0.1)"
+    )
+    parser.add_argument(
+        "-r", "--radius",
+        type = float,
+        help = "Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)"
+    )
+    parser.add_argument(
+        "--subset",
+        type = int,
+        help = "Subset codebook matrix set among epochs (Default = epoch number)"
+    )
+    # Anomaly detection
+    parser.add_argument(
+        "-l", "--label",
+        type = str,
+        default = "1,0",
+        help = "Anomaly and normal labels, e.g. 1,0 (default)"
+    )
+    parser.add_argument(
+        "-u", "--threshold",
+        type = str,
+        default = "cltlind",
+        help = "Threshold method - cltlind (default), clt, anova, ztest, mean, quantile, radius, inv_som, kmeans, hclust"
+    )
+    # clt and cltlind
+    parser.add_argument(
+        "-b", "--bootstrap",
+        type = str,
+        default = 1,
+        help = "Bootstrap sample numbers (Default = 1, bootstrap not performed)"
+    )
+    parser.add_argument(
+        "-o", "--overfit",
+        help = "Use only mapped codebook",
+        action = "store_true"
+    )
+    parser.add_argument(
+        "--find",
+        type = float,
+        help = "When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor"
+    )
+    parser.add_argument(
+        "-q", "--multiple",
+        type = str,
+        default = "gai",
+        help = "Multiple testing method - gai (default), invest, or bh"
+    )
+    # Plot
+    parser.add_argument(
+        "-1", "--error",
+        help = "Plot reconstruction error for each epoch",
+        action = "store_true"
+    )
+    parser.add_argument(
+        "-2", "--heat",
+        help = "Plot heatmap of SOM",
+        action = "store_true"
+    )
+    parser.add_argument(
+        "-3", "--pred",
+        help = "Plot heatmap of projection onto normal SOM",
+        action = "store_true"
+    )
+    # assign arguments
+    args = parser.parse_args()
+    normal_file = args.normal
+    online_file = args.online
     output_list = None
-    dstat_file = None
+    if str(args.output).strip().find(",") != -1:
+        output_list = str(args.output).strip().split(",")
+        output_file = output_list[0]
+        dstat_file = output_list[1]
+    else:
+        output_file = args.output
     cols = None
-    # training arguments
-    standard = False
-    window_size = 30
-    jump_size = 30
-    xdim = None
-    ydim = None
-    topo = "hexagonal"
-    neighbor = "gaussian"
-    dist = "frobenius"
-    decay = "exponential"
-    seed = None
-    epoch = 50
-    subset_net = 50
-    init_rate = None
-    init_radius = None
-    # detection arguments
-    label = [1, 0]
-    threshold = "cltlind"
-    ztest_opt = .9
+    if args.column is not None:
+        cols = str(args.column).strip().split(',')
+        cols = range(int(cols[0]), int(cols[1]))
+    if args.eval is not None:
+        print_eval = True
+        true_file = args.eval
+        target_names = ["anomaly", "normal"]
+    standard = args.standardize
+    window_size = args.window
+    jump_size = args.jump
+    xdim = args.xgrid
+    ydim = args.ygrid
+    topo = args.prototype
+    neighbor = args.neighborhood
+    dist = args.metric
+    decay = args.decay
+    seed = args.seed
+    epoch = args.iter
+    subset_net = epoch
+    init_rate = args.alpha
+    init_radius = args.radius
+    if args.subset is not None:
+        subset_net = args.subset
+    label = str(args.label).strip().split(",")
+    label = [int(label[0]), int(label[1])]
     threshold_list = None
-    boot = 1
-    multiple_test = "bh"
+    ztest_opt = .9
+    if str(args.threshold).strip().find(",") != -1:
+        threshold_list = str(args.threshold).strip().split(",")
+        threshold = threshold_list[0]
+        ztest_opt = float(threshold_list[1])
+    else:
+        threshold = args.threshold
+    boot = args.bootstrap
+    proj = args.overfit
+    neighbor_node = args.find
+    multiple_list = None
     eta = None
     rho = None
-    multiple_list = None
-    proj = False
-    neighbor_node = None
-    # print_eval
-    print_eval = False
-    target_names = ["anomaly", "normal"]
-    true_file = None
-    # plot options
-    print_error = False
-    print_heat = False
-    print_projection = False
-    try:
-        opts, args = getopt.getopt(argv, "hn:o:p:c:z:iw:j:x:y:t:f:d:g:s:l:m:b:uv:q:e:a:r:k:123",
-                                   ["help",
-                                    "Normal file=", "Online file=", "Output file=", "column index list=(default:None)",
-                                    "True label file",
-                                    "Standardize",
-                                    "Window size=(default:30)", "Jump size=(default:30)",
-                                    "x-grid=(default:sqrt 5 * sqrt N)", "y-grid=(default:sqrt 5 * sqrt N)",
-                                    "topology=(default:hexagonal)",
-                                    "Neighborhood function=(default:gaussian)", "Distance=(default:frobenius)",
-                                    "Decay=(default:exponential)",
-                                    "Random seed=(default:None)", "Label=(default:[1,0])", "Threshold=(default:ztest)",
-                                    "Bootstrap for clt", "Use only mapped codebook matrix for clt or cltlind",
-                                    "Mapped codebook matrices and their neighboring nodes",
-                                    "Multiple testing options for clt and cltlind=(default:bh)",
-                                    "Epoch number=(default:50)",
-                                    "Initial learning rate=(default:0.5)", "Initial radius=(default:function)",
-                                    "Subset weight matrix among epochs=(default:50)",
-                                    "Plot reconstruction error",
-                                    "Plot heatmap for SOM",
-                                    "Plot heatmap of projection onto normal SOM"])
-    except getopt.GetoptError as err:
-        print(err)
-        usage_message = """python detector.py -n <normal_file> -o <online_file> {-c} <column_range>
-                                                    -p <output_file> {-z} <true_file>
-                                                    {-i} {-w} <window_size> {-j} <jump_size> {-x} <x_grid> {-y} <y_grid> 
-                                                    {-t} <topology> {-f} <neighborhood> {-d} <distance> {-g} <decay> 
-                                                    {-s} <seed> {-e} <epoch> {-a} <init_rate> {-r} <init_radius>
-                                                    {-k} <subset_net>
-                                                    {-l} <label> {-m} <threshold>
-                                                    {-b} <boot_num> {-u} {-v} <neighbor_radius> {-q} <multiple_test>
-                                                    {-1} {-2} {-3}
-        """
-        print(usage_message)
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == "-h" or opt == "--help":
-            message = """Arguments:
-            -h or --help: help
-File path:
-            -n: Normal data set file
-            -o: Online data set file
-            -c: first and the last column indices to read, e.g. 1,5 --> usecols=range(1,5)
-                Default = None (every column)
-            -p: Output file
-            -z: True label file (optional - if provided, print evaluation)
-Training SOM (option):
-            -i: standardize data if specified
-            -w: window size
-                Default = 30
-            -j: shift size
-                Default = 30
-            -x: number of x-grid
-                Default = sqrt(5 * sqrt(nrow of som tensor))
-            -y: number of y-grid
-                Default = sqrt(5 * sqrt(nrow of som tensor))
-            -t: topology of SOM output space - rectangular or hexagonal
-                Default = hexagonal
-            -f: neighborhood function - gaussian or bubble
-                Default = gaussian
-            -d: distance function - frobenius, nuclear, mahalanobis, or eros
-                Default = frobenius
-            -g: decaying function - exponential or linear
-                Default = exponential
-            -s: random seed
-                Default = current system time
-            -e: epoch number
-                Default = 50
-            -a: initial learning ratio
-                Default = 0.1
-            -r: initial radius of BMU neighborhood
-                Default = 2/3 quantile of every distance between nodes
-            -k: subset weight matrix among epochs
-                Default = epoch number
-Detecting anomalies (option):
-            -l: anomaly and normal label
-                Default = 1,0
-            -m: threshold method - quantile, radius, mean, inv_som, kmeans, hclust, ztest, clt, or cltlind
-                Default = cltlind
-                Note: if you give use ztest with comma and quantile number such as ztest,0.9, you can change the quantile.
-            -b: bootstrap sample number for clt and cltlind
-                Default = 1
-            -u: use only mapped codebook for clt and cltlind
-            -v: when using mapped codebook, neighboring nodes also can be used
-                Default = None (do not use)
-            -q: multiple testing method for clt and cltlind - bh, invest, or gai
-                Default = bh
-Plot if specified:
-            -1: plot reconstruction error path
-            -2: plot heatmap of SOM
-            -3: plot heatmap of projection onto normal SOM
-            """
-            print(message)
-            sys.exit()
-        elif opt in ("-n"):
-            normal_file = arg
-        elif opt in ("-o"):
-            online_file = arg
-        elif opt in ("-p"):
-            if str(arg).strip().find(",") != -1:
-                output_list = str(arg).strip().split(",")
-                output_file = output_list[0]
-                dstat_file = output_list[1]
-            else:
-                output_file = arg
-        elif opt in ("-c"):
-            cols = str(arg).strip().split(',')
-            cols = range(int(cols[0]), int(cols[1]))
-        elif opt in ("-z"):
-            print_eval = True
-            true_file = arg
-        elif opt in ("-i"):
-            standard = True
-        elif opt in ("-w"):
-            window_size = int(arg)
-        elif opt in ("-j"):
-            jump_size = int(arg)
-        elif opt in ("-x"):
-            xdim = int(arg)
-        elif opt in ("-y"):
-            ydim = int(arg)
-        elif opt in ("-t"):
-            topo = arg
-        elif opt in ("-f"):
-            neighbor = arg
-        elif opt in ("-d"):
-            dist = arg
-        elif opt in ("-g"):
-            decay = arg
-        elif opt in ("-s"):
-            seed = int(arg)
-        elif opt in ("-l"):
-            label = str(arg).strip().split(",")
-            label = [int(label[0]), int(label[1])]
-        elif opt in ("-m"):
-            if str(arg).strip().find(",") != -1:
-                threshold_list = str(arg).strip().split(",")
-                threshold = threshold_list[0]
-                ztest_opt = float(threshold_list[1])
-            else:
-                threshold = arg
-        elif opt in ("-b"):
-            boot = int(arg)
-        elif opt in ("-u"):
-            proj = True
-        elif opt in ("-v"):
-            neighbor_node = float(arg)
-        elif opt in ("-q"):
-            if str(arg).strip().find(",") != -1:
-                multiple_list = str(arg).strip().split(",")
-                multiple_test = multiple_list[0]
-                if str(multiple_list[1]).strip().find("+") != -1:
-                    multiple_opt = str(multiple_list[1]).strip().split("+")
-                    eta = float(multiple_opt[0])
-                    rho = float(multiple_opt[1])
-                else:
-                    eta = float(multiple_list[1])
-            elif str(arg).strip().find("+") != -1:
-                multiple_list = str(arg).strip().split("+")
-                multiple_test = multiple_list[0]
-                rho = float(multiple_list[1])
-            else:
-                multiple_test = arg
-        elif opt in ("-e"):
-            epoch = int(arg)
-            subset_net = epoch
-        elif opt in ("-a"):
-            init_rate = float(arg)
-        elif opt in ("-r"):
-            init_radius = float(arg)
-        elif opt in ("-k"):
-            subset_net = int(arg)
-        elif opt in ("-1"):
-            print_error = True
-        elif opt in ("-2"):
-            print_heat = True
-        elif opt in ("-3"):
-            print_projection = True
+    if str(args.multiple).strip().find(",") != -1:
+        multiple_list = str(args.multiple).strip().split(",")
+        multiple_test = multiple_list[0]
+        if str(multiple_list[1]).strip().find("+") != -1:
+            multiple_opt = str(multiple_list[1]).strip().split("+")
+            eta = float(multiple_opt[0])
+            rho = float(multiple_opt[1])
+        else:
+            eta = float(multiple_list[1])
+    elif str(args.multiple).strip().find("+") != -1:
+        multiple_list = str(args.multiple).strip().split("+")
+        multiple_test = multiple_list[0]
+        rho = float(multiple_list[1])
+    else:
+        multiple_test = args.multiple
+    print_error = args.error
+    print_heat = args.heat
+    print_projection = args.pred
+    # somanomaly
     start_time = time.time()
     som_anomaly = SomDetect(normal_file, online_file, cols, standard,
                             window_size, jump_size,
