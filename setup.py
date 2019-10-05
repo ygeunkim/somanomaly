@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="SomAnomaly",
-    version="0.1.0",
+    version="1.0.0",
     author="Young Geun Kim",
     author_email="dudrms33@g.skku.edu",
     description="Anomaly detection using self-organizing maps",
