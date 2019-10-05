@@ -571,7 +571,7 @@ class SomDetect:
             plt.show()
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     # positional arguments
     parser.add_argument(
@@ -736,6 +736,7 @@ def main(argv):
     normal_file = args.normal
     online_file = args.online
     output_list = None
+    dstat_file = None
     if str(args.output).strip().find(",") != -1:
         output_list = str(args.output).strip().split(",")
         output_file = output_list[0]
@@ -873,4 +874,4 @@ def main(argv):
 
 if __name__ == '__main__':
     np.set_printoptions(precision = 3)
-    main(sys.argv[1:])
+    main()
