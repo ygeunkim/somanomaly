@@ -820,6 +820,14 @@ def main():
         window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
     print("")
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
+    # files
+    print("Files-------------------------------------")
+    print("Normal data: ", normal_file)
+    print("Streaming data: ", online_file)
+    print("Anomaly detection: ", output_file)
+    if dstat_file is not None:
+        print("SomAnomly statistic: ", dstat_file)
+        print("Window prediction: ", dstat_file.replace(".csv", "_pred.csv"))
     # print parameter
     print("SOM parameters----------------------------")
     if som_anomaly.standard:

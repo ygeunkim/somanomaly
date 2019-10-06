@@ -6,13 +6,14 @@
 
 This module requires the following.
 
-- Numpy: [https://www.numpy.org](https://www.numpy.org)
-- pandas: [https://pandas.pydata.org](https://pandas.pydata.org)
-- scipy: [https://www.scipy.org](https://www.scipy.org)
-- scikit-learn: [https://scikit-learn.org/stable/](https://scikit-learn.org/stable/)
-- plotly: [https://plot.ly/python/](https://plot.ly/python/)
-- matplotlib: [https://matplotlib.org](https://matplotlib.org)
-- tqdm: [https://tqdm.github.io](https://tqdm.github.io)
+- Numpy: [www.numpy.org](https://www.numpy.org)
+- pandas: [pandas.pydata.org](https://pandas.pydata.org)
+- scipy: [www.scipy.org](https://www.scipy.org)
+- scikit-learn: [scikit-learn.org/stable/](https://scikit-learn.org/stable/)
+- plotly: [plot.ly/python/](https://plot.ly/python/)
+- matplotlib: [matplotlib.org](https://matplotlib.org)
+- tqdm: [tqdm.github.io](https://tqdm.github.io)
+- argparse: [github.com/ThomasWaldmann/argparse](https://github.com/ThomasWaldmann/argparse/)
 
 ```
 git clone https://github.com/ygeunkim/somanomaly.git
