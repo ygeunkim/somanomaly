@@ -1,4 +1,4 @@
-# <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
+# <img alt="SomAnomaly" src="docs/somanomaly_icon_v2.png" height="60">
 
 **Online SOM Detector** - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
@@ -168,11 +168,7 @@ Given multivariate time series, we are trying to find outlying pattern. This rep
 
 Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set. Different with ordinary SOM structure, we use input **matrices**, not vectors.
 
-The algorithm requires computing *distance between matrices* - input matrix and weight (codebook) matrix.
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/distance.png">
-</p>
+The algorithm requires computing *distance between matrices* - input matrix and codebook matrix.
 
 ### Anomaly detection
 
