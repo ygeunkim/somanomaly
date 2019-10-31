@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import sys
-import getopt
 import argparse
 import time
 import plotly.graph_objs as go
@@ -106,7 +104,7 @@ class SomDetect:
         :param label: anomaly and normal label list
         :param threshold: threshold for detection - mean, quantile, radius, kmeans, ztest, clt, cltlind, or anova
         :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
-        :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, or gai
+        :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
         :param mfdr: eta of alpha-investing
         :param power: rho of GAI
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
@@ -128,7 +126,7 @@ class SomDetect:
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        test_types = ["bh", "invest", "gai"]
+        test_types = ["bh", "invest", "gai", "lord"]
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
@@ -314,6 +312,33 @@ class SomDetect:
                     psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
                     # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
                     wealth += -phi + rj * psi
+                som_anomaly = som_anomaly[1:]
+            elif clt_test == "lord":
+                alpha = 1 - level
+                if mfdr is None:
+                    mfdr = 1 - alpha
+                som_anomaly = True
+                # W(0)
+                wealth = np.array([alpha * mfdr])
+                # last discovery time
+                tau = 0
+                # gamma seq of LORD3
+                gamma = []
+                for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "lord"):
+                    gamma = np.append(
+                        gamma,
+                        .0772 * np.log(np.maximum(j + 1, 2)) / ((j + 1) * np.exp(np.sqrt(np.log(j + 1))))
+                    )
+                    # alpha(j) = gamma(j - tau) * w(tau)
+                    alphaj = gamma[j - tau] * wealth[tau]
+                    rj = pvalue[j] <= alphaj
+                    som_anomaly = np.append(som_anomaly, rj)
+                    tau = rj * j
+                    # w(j) = w(j - 1) - alpha(j) + R(j) * alpha
+                    wealth = np.append(
+                        wealth,
+                        wealth[j] - alphaj + rj * alpha
+                    )
                 som_anomaly = som_anomaly[1:]
         elif threshold == "anova":
             if bootstrap == 1:
@@ -713,7 +738,7 @@ def main():
         "-q", "--multiple",
         type = str,
         default = "gai",
-        help = "Multiple testing method - gai (default), invest, or bh"
+        help = "Multiple testing method - gai (default), invest, lord, or bh"
     )
     # Plot
     parser.add_argument(
