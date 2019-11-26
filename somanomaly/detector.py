@@ -33,7 +33,7 @@ class SomDetect:
     def __init__(
             self, path_normal, path_online, cols = None, standard = False,
             window_size = 60, jump_size = 60,
-            xdim = 20, ydim = 20, topo = "rectangular", neighbor = "gaussian",
+            xdim = None, ydim = None, topo = "rectangular", neighbor = "gaussian",
             dist = "frobenius", decay = "exponential", seed = None
     ):
         """
@@ -644,14 +644,14 @@ def main():
     parser.add_argument(
         "-x", "--xgrid",
         type = int,
-        default = 50,
-        help = "Number of x-grid (Default = 50)"
+        default = None,
+        help = "Number of x-grid (Default = sqrt(N * sqrt(N)))"
     )
     parser.add_argument(
         "-y", "--ygrid",
         type = int,
-        default = 50,
-        help = "Number of y-grid (Default = 50)"
+        default = None,
+        help = "Number of y-grid (Default = sqrt(N * sqrt(N)))"
     )
     parser.add_argument(
         "-p", "--prototype",
