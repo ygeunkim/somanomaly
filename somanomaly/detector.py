@@ -302,7 +302,8 @@ class SomDetect:
                 som_anomaly = True
                 for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "gai"):
                     # relative200 scheme - phi(k) = w(k - 1) / 10, k = 1, 2, ...
-                    phi = wealth / 10
+                    if j < 200:
+                        phi = wealth / 10
                     # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
                     # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
                     alphaj = (phi * power) / (phi + power)
@@ -310,7 +311,7 @@ class SomDetect:
                     som_anomaly = np.append(som_anomaly, rj)
                     # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
                     psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
-                    # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
+                    # w(k) = w(k - 1) - phi(k) + R(k)psi(k), update until 200th test
                     wealth += -phi + rj * psi
                 som_anomaly = som_anomaly[1:]
             elif clt_test == "lord":
