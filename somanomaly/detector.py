@@ -32,7 +32,7 @@ class SomDetect:
 
     def __init__(
             self, path_normal, path_online, cols = None, standard = False,
-            window_size = 60, jump_size = 60,
+            window_size = 60, jump_size = 60, test_log = False,
             xdim = None, ydim = None, topo = "rectangular", neighbor = "gaussian",
             dist = "frobenius", decay = "exponential", seed = None
     ):
@@ -43,6 +43,7 @@ class SomDetect:
         :param standard: standardize both data sets
         :param window_size: window size
         :param jump_size: shift size
+        :param test_log: log-scale streaming series
         :param xdim: Number of x-grid
         :param ydim: Number of y-grid
         :param topo: Topology of output space - rectangular or hexagonal
@@ -51,8 +52,8 @@ class SomDetect:
         :param decay: decaying learning rate and radius - exponential or linear
         :param seed: Random seed
         """
-        self.som_tr = SomData(path_normal, cols, window_size, jump_size)
-        self.som_te = SomData(path_online, cols, window_size, jump_size)
+        self.som_tr = SomData(path_normal, cols, window_size, jump_size, False)
+        self.som_te = SomData(path_online, cols, window_size, jump_size, test_log)
         self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
         self.win_size = window_size
         self.jump = jump_size
@@ -257,6 +258,9 @@ class SomDetect:
                 sn = np.sqrt(
                     np.sum(normal_distance[:, 1] * proj_count)
                 )
+                # sn = np.sqrt(
+                #     net_stand.shape[0] * np.average(normal_distance[:, 1], weights = proj_count)
+                # )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
             pvalue = 1 - norm.cdf(self.dstat)
@@ -301,9 +305,10 @@ class SomDetect:
                 wealth = alpha * mfdr
                 som_anomaly = True
                 for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "gai"):
-                    # relative200 scheme - phi(k) = w(k - 1) / 10, k = 1, 2, ...
-                    if j < 200:
-                        phi = wealth / 10
+                    # phi(k) = w(k - 1) / 10, k = 1, 2, ...
+                    # relative scheme - until w(j) < w(0) / 1000
+                    # relative200 scheme - until 200 tests
+                    phi = wealth / 10
                     # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
                     # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
                     alphaj = (phi * power) / (phi + power)
@@ -311,7 +316,7 @@ class SomDetect:
                     som_anomaly = np.append(som_anomaly, rj)
                     # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
                     psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
-                    # w(k) = w(k - 1) - phi(k) + R(k)psi(k), update until 200th test
+                    # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
                     wealth += -phi + rj * psi
                 som_anomaly = som_anomaly[1:]
             elif clt_test == "lord":
@@ -624,6 +629,11 @@ def main():
         "-e", "--eval",
         help = "True label dataset file"
     )
+    parser.add_argument(
+        "--log",
+        help = "Log transform",
+        action = "store_true"
+    )
     # SOM training
     parser.add_argument(
         "--standardize",
@@ -777,6 +787,7 @@ def main():
         print_eval = True
         true_file = args.eval
         target_names = ["anomaly", "normal"]
+    test_log = args.log
     standard = args.standardize
     window_size = args.window
     jump_size = args.jump
@@ -830,7 +841,7 @@ def main():
     # somanomaly
     start_time = time.time()
     som_anomaly = SomDetect(normal_file, online_file, cols, standard,
-                            window_size, jump_size,
+                            window_size, jump_size, test_log,
                             xdim, ydim, topo, neighbor, dist, decay, seed)
     som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
     som_anomaly.detect_anomaly(label = label, threshold = threshold,

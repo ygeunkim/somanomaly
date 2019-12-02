@@ -4,6 +4,7 @@
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/somanomaly/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/window.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -245,6 +246,14 @@
       <workItem from="1574926776858" duration="1326000" />
       <workItem from="1574944738132" duration="1233000" />
       <workItem from="1574949768231" duration="1754000" />
+      <workItem from="1574995888715" duration="276000" />
+      <workItem from="1574996533169" duration="765000" />
+      <workItem from="1575002093813" duration="3395000" />
+      <workItem from="1575097919891" duration="243000" />
+      <workItem from="1575098527041" duration="448000" />
+      <workItem from="1575181333892" duration="544000" />
+      <workItem from="1575248726889" duration="1582000" />
+      <workItem from="1575252917383" duration="3597000" />
     </task>
     <servers />
   </component>
