@@ -81,13 +81,15 @@ class SomDetect:
         # plot
         self.project = None
 
-    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None, subset_net = 100):
+    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None, subset_net = None):
         """
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
         :param subset_net: choose specific weight matrix set among epochs
         """
+        if subset_net is None:
+            subset_net = epoch
         if epoch < subset_net:
             raise ValueError("epoch should be same or larger than subset_net")
         self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius, keep_net = epoch > subset_net)
@@ -601,6 +603,63 @@ class SomDetect:
             plt.hexbin(x, y)
             plt.show()
 
+    @classmethod
+    def detect_block(cls, normal_list, online_list, col_list, standard = False,
+                     window_size = 60, jump_size = 60, test_log = False,
+                     xdim = None, ydim = None, topo = "rectangular", neighbor = "gaussian",
+                     dist = "frobenius", decay = "exponential", seed = None,
+                     epoch = 100, init_rate = None, init_radius = None, subset_net = None,
+                     label = None, level = .9, clt_test = "gai", mfdr = None, power = None):
+        """
+        :param normal_list: normal series files
+        :param online_list: online series files
+        :param col_list: column range array for each file
+        :param standard: standardize both data sets
+        :param window_size: window size
+        :param jump_size: shift size
+        :param test_log: log-scale streaming series
+        :param xdim: Number of x-grid
+        :param ydim: Number of y-grid
+        :param topo: Topology of output space - rectangular or hexagonal
+        :param neighbor: Neighborhood function - gaussian or bubble
+        :param dist: Distance function - frobenius, nuclear, or
+        :param decay: decaying learning rate and radius - exponential or linear
+        :param seed: Random seed
+        :param epoch: epoch number
+        :param init_rate: initial learning rate
+        :param init_radius: initial radius of BMU neighborhood
+        :param subset_net: choose specific weight matrix set among epochs
+        :param label: anomaly and normal label list
+        :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
+        :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
+        :param mfdr: eta of alpha-investing
+        :param power: rho of GAI
+        :return: Anomaly detection
+        """
+        num_tr = len(normal_list)
+        num_te = len(online_list)
+        if num_tr != num_te:
+            raise ValueError("Invalid file list. normal_list and online_list should be same length.")
+        anomaly_df = None
+        for b in tqdm(range(num_tr), desc = "block"):
+            som_anomaly = cls(
+                normal_list[b], online_list[b], range(col_list[b, 0], col_list[b, 1]),
+                standard, window_size, jump_size, test_log, xdim, ydim, topo, neighbor, dist, decay, seed
+            )
+            som_anomaly.learn_normal(epoch, init_rate, init_radius, subset_net)
+            som_anomaly.detect_anomaly(label, threshold = "cltlind", level = level, clt_test = clt_test,
+                                       mfdr = mfdr, power = power, bootstrap = 1, clt_map = True, neighbor = None)
+            col_name = ".pred" + str(b)
+            if b == 0:
+                anomaly_df = pd.DataFrame({col_name: som_anomaly.window_anomaly})
+            else:
+                anomaly_df[col_name] = som_anomaly.anomaly
+            anomaly = anomaly_df.any(axis = 1).to_numpy()
+            anomaly_label = np.repeat(label[1], som_anomaly.anomaly.shape[0])
+            for i in range(som_anomaly.window_anomaly.shape[0]):
+                if anomaly[i] == label[0]:
+                    anomaly_label[(i * jump_size):(i * jump_size + window_size)] = label[0]
+            return anomaly_label
 
 def main():
     parser = argparse.ArgumentParser()
@@ -771,6 +830,12 @@ def main():
     args = parser.parse_args()
     normal_file = args.normal
     online_file = args.online
+    normal_list = None
+    online_list = None
+    if str(args.normal).strip().find(",") != -1:
+        normal_list = str(args.normal).strip().split(",")
+    if str(args.online).strip().find(",") != -1:
+        online_list = str(args.online).strip().split(",")
     output_list = None
     dstat_file = None
     if str(args.output).strip().find(",") != -1:
@@ -780,9 +845,14 @@ def main():
     else:
         output_file = args.output
     cols = None
+    col_list = None
     if args.column is not None:
-        cols = str(args.column).strip().split(',')
-        cols = range(int(cols[0]), int(cols[1]))
+        if str(args.column).count(",") == 1:
+            cols = str(args.column).strip().split(",")
+            cols = range(int(cols[0]), int(cols[1]))
+        elif str(args.column).count(",") > 1:
+            col_tmp = str(args.column).strip().split(",")
+            col_list = np.array(col_tmp).astype(int).reshape((-1, 2))
     if args.eval is not None:
         print_eval = True
         true_file = args.eval
@@ -840,44 +910,70 @@ def main():
     print_projection = args.pred
     # somanomaly
     start_time = time.time()
-    som_anomaly = SomDetect(normal_file, online_file, cols, standard,
-                            window_size, jump_size, test_log,
-                            xdim, ydim, topo, neighbor, dist, decay, seed)
-    som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
-    som_anomaly.detect_anomaly(label = label, threshold = threshold,
-                               level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho,
-                               bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
-    som_anomaly.label_anomaly()
-    anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
-    anomaly_df.to_csv(output_file, index = False, header = False)
-    if dstat_file is not None:
-        dstat_df = pd.DataFrame({".som": som_anomaly.dstat})
-        dstat_df.to_csv(dstat_file, index = False, header = False)
-        window_df = pd.DataFrame({".pred": som_anomaly.window_anomaly})
-        window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
+    if normal_list is None:
+        som_anomaly = SomDetect(normal_file, online_file, cols, standard,
+                                window_size, jump_size, test_log,
+                                xdim, ydim, topo, neighbor, dist, decay, seed)
+        som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
+        som_anomaly.detect_anomaly(label = label, threshold = threshold,
+                                   level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho,
+                                   bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
+        som_anomaly.label_anomaly()
+        anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
+        anomaly_df.to_csv(output_file, index = False, header = False)
+        if dstat_file is not None:
+            dstat_df = pd.DataFrame({".som": som_anomaly.dstat})
+            dstat_df.to_csv(dstat_file, index = False, header = False)
+            window_df = pd.DataFrame({".pred": som_anomaly.window_anomaly})
+            window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
+    else:
+        anomaly_pred = SomDetect.detect_block(
+            normal_list, online_list, col_list,
+            standard, window_size, jump_size, test_log,
+            xdim, ydim, topo, neighbor, dist, decay, seed,
+            epoch, init_rate, init_radius, subset_net, label, ztest_opt, multiple_test, eta, rho
+        )
+        anomaly_df = pd.DataFrame({".pred": anomaly_pred})
+        anomaly_df.to_csv(output_file, index = False, header = False)
     print("")
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # files
     print("Files-------------------------------------")
-    print("Normal data: ", normal_file)
-    print("Streaming data: ", online_file)
-    print("Anomaly detection: ", output_file)
-    if dstat_file is not None:
-        print("SomAnomly statistic: ", dstat_file)
-        print("Window prediction: ", dstat_file.replace(".csv", "_pred.csv"))
-    # print parameter
-    print("SOM parameters----------------------------")
-    if som_anomaly.standard:
-        print("Standardized!")
-    print("Initial learning rate: ", som_anomaly.som_grid.initial_learn)
-    print("Initial radius: ", som_anomaly.som_grid.initial_r)
-    print("[Window, jump]: ", [som_anomaly.win_size, som_anomaly.jump])
-    print("SOM grid: ", som_anomaly.som_grid.net_dim)
-    print("Topology: ", som_anomaly.som_grid.topo)
-    print("Neighborhood function: ", som_anomaly.som_grid.neighbor_func)
-    print("Decay function: ", som_anomaly.som_grid.decay_func)
-    print("Distance function: ", som_anomaly.som_grid.dist_func)
-    print("Epoch number: ", som_anomaly.som_grid.epoch)
+    if normal_list is None:
+        print("Normal data: ", normal_file)
+        print("Streaming data: ", online_file)
+        print("Anomaly detection: ", output_file)
+        if dstat_file is not None:
+            print("SomAnomly statistic: ", dstat_file)
+            print("Window prediction: ", dstat_file.replace(".csv", "_pred.csv"))
+        # print parameter
+        print("SOM parameters----------------------------")
+        if som_anomaly.standard:
+            print("Standardized!")
+        print("Initial learning rate: ", som_anomaly.som_grid.initial_learn)
+        print("Initial radius: ", som_anomaly.som_grid.initial_r)
+        print("[Window, jump]: ", [som_anomaly.win_size, som_anomaly.jump])
+        print("SOM grid: ", som_anomaly.som_grid.net_dim)
+        print("Topology: ", som_anomaly.som_grid.topo)
+        print("Neighborhood function: ", som_anomaly.som_grid.neighbor_func)
+        print("Decay function: ", som_anomaly.som_grid.decay_func)
+        print("Distance function: ", som_anomaly.som_grid.dist_func)
+        print("Epoch number: ", som_anomaly.som_grid.epoch)
+    else:
+        print("Normal data: ", normal_list)
+        print("Streaming data: ", online_list)
+        print("Anomaly detection: ", output_file)
+        # print parameter
+        print("SOM parameters----------------------------")
+        print("Initial learning rate: ", init_rate)
+        print("Initial radius: ", init_radius)
+        print("[Window, jump]: ", [window_size, jump_size])
+        print("SOM grid: ", np.array([xdim, ydim]))
+        print("Topology: ", topo)
+        print("Neighborhood function: ", neighbor)
+        print("Decay function: ", decay)
+        print("Distance function: ", dist)
+        print("Epoch number: ", epoch)
     if epoch > subset_net:
         print("Subset weight matrix of: ", subset_net)
     print("------------------------------------------")
@@ -896,25 +992,36 @@ def main():
             print("with multiple testing %s" % multiple_test)
     print("==========================================")
     # evaluation
-    if print_eval:
-        true_anomaly = pd.read_csv(true_file, header = None)
-        true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
-        print(
-            classification_report(
-                true_anomaly, som_anomaly.anomaly,
-                labels = label, target_names = target_names
+    if normal_list is None:
+        if print_eval:
+            true_anomaly = pd.read_csv(true_file, header = None)
+            true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
+            print(
+                classification_report(
+                    true_anomaly, som_anomaly.anomaly,
+                    labels = label, target_names = target_names
+                )
             )
-        )
-    # plot
-    if print_error or print_heat or print_projection:
-        plot_start = time.time()
-        if print_error:
-            som_anomaly.som_grid.plot_error()
-        if print_heat:
-            som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
-        if print_projection:
-            som_anomaly.plot_heatmap()
-        print("Plotting time: %.2f seconds" % (time.time() - plot_start))
+        # plot
+        if print_error or print_heat or print_projection:
+            plot_start = time.time()
+            if print_error:
+                som_anomaly.som_grid.plot_error()
+            if print_heat:
+                som_anomaly.som_grid.plot_heatmap(som_anomaly.som_tr.window_data)
+            if print_projection:
+                som_anomaly.plot_heatmap()
+            print("Plotting time: %.2f seconds" % (time.time() - plot_start))
+    else:
+        if print_eval:
+            true_anomaly = pd.read_csv(true_file, header=None)
+            true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
+            print(
+                classification_report(
+                    true_anomaly, anomaly_pred,
+                    labels=label, target_names=target_names
+                )
+            )
 
 
 if __name__ == '__main__':
