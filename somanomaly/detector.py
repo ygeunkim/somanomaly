@@ -125,7 +125,7 @@ class SomDetect:
             "quantile", "radius", "mean", "inv_som",
             "kmeans", "hclust",
             "ztest",
-            "clt", "cltlind",
+            "clt", "cltlind", "explrt",
             "anova"
         ]
         if threshold not in thr_types:
@@ -210,7 +210,7 @@ class SomDetect:
                 [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
             som_anomaly = dist_anomaly > chi2.ppf(level, self.som_te.window_data.shape[1])
-        elif threshold == "clt" or threshold == "cltlind":
+        elif threshold == "clt" or threshold == "cltlind" or threshold == "explrt":
             if clt_map:
                 if self.som_grid.project is None:
                     normal_distance = np.asarray(
@@ -256,7 +256,7 @@ class SomDetect:
                 ) / net_stand.shape[0]
                 # sqrt(n) (dbar - mu) -> N(0, sigma2)
                 self.dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
-            else:
+            elif threshold == "cltlind":
                 clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
                 sn = np.sqrt(
                     np.sum(normal_distance[:, 1] * proj_count)
@@ -268,7 +268,16 @@ class SomDetect:
                 self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
                 if log_stat:
                     self.dstat = np.log2(self.dstat + 1)
-            pvalue = 1 - norm.cdf(self.dstat)
+            else:
+                # MLE of mean of distribution - set as true
+                theta0 = np.average(normal_distance[:, 0], weights = proj_count)
+                self.dstat = 2 * net_stand.shape[0] * dist_anomaly / theta0
+            # pvalue
+            if threshold == "clt" or "cltlind":
+                pvalue = 1 - norm.cdf(self.dstat)
+            else:
+                pvalue = 2 * (1 - chi2.cdf(self.dstat, df = 2 * net_stand.shape[0]))
+            # multiple test
             if clt_test == "bh":
                 alpha = 1 - level
                 alpha /= self.som_te.window_data.shape[0]
