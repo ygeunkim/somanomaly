@@ -100,7 +100,7 @@ class SomDetect:
 
     def detect_anomaly(
             self, label = None, threshold = "cltlind",
-            level = .9, clt_test = "bh", mfdr = None, power = None,
+            level = .9, clt_test = "bh", mfdr = None, power = None, log_stat = False,
             bootstrap = 1, clt_map = False, neighbor = None
     ):
         """
@@ -110,6 +110,7 @@ class SomDetect:
         :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
         :param mfdr: eta of alpha-investing
         :param power: rho of GAI
+        :param log_stat: log2 transform the stat
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
         :param neighbor: radius - use neighboring nodes when clt_map
@@ -265,6 +266,8 @@ class SomDetect:
                 # )
                 # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
                 self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
+                if log_stat:
+                    self.dstat = np.log2(self.dstat + 1)
             pvalue = 1 - norm.cdf(self.dstat)
             if clt_test == "bh":
                 alpha = 1 - level
@@ -609,7 +612,7 @@ class SomDetect:
                      xdim = None, ydim = None, topo = "rectangular", neighbor = "gaussian",
                      dist = "frobenius", decay = "exponential", seed = None,
                      epoch = 100, init_rate = None, init_radius = None, subset_net = None,
-                     label = None, level = .9, clt_test = "gai", mfdr = None, power = None):
+                     label = None, level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False):
         """
         :param normal_list: normal series files
         :param online_list: online series files
@@ -634,6 +637,7 @@ class SomDetect:
         :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
         :param mfdr: eta of alpha-investing
         :param power: rho of GAI
+        :param log_stat: log2 transform the stat
         :return: Anomaly detection
         """
         num_tr = len(normal_list)
@@ -648,7 +652,8 @@ class SomDetect:
             )
             som_anomaly.learn_normal(epoch, init_rate, init_radius, subset_net)
             som_anomaly.detect_anomaly(label, threshold = "cltlind", level = level, clt_test = clt_test,
-                                       mfdr = mfdr, power = power, bootstrap = 1, clt_map = True, neighbor = None)
+                                       mfdr = mfdr, power = power, log_stat = log_stat,
+                                       bootstrap = 1, clt_map = True, neighbor = None)
             col_name = ".pred" + str(b)
             if b == 0:
                 anomaly_df = pd.DataFrame({col_name: som_anomaly.window_anomaly})
@@ -691,6 +696,11 @@ def main():
     parser.add_argument(
         "--log",
         help = "Log transform",
+        action = "store_true"
+    )
+    parser.add_argument(
+        "--logstat",
+        help = "Log2 stat",
         action = "store_true"
     )
     # SOM training
@@ -858,6 +868,7 @@ def main():
         true_file = args.eval
         target_names = ["anomaly", "normal"]
     test_log = args.log
+    stat_log = args.logstat
     standard = args.standardize
     window_size = args.window
     jump_size = args.jump
@@ -916,7 +927,7 @@ def main():
                                 xdim, ydim, topo, neighbor, dist, decay, seed)
         som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
         som_anomaly.detect_anomaly(label = label, threshold = threshold,
-                                   level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho,
+                                   level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho, log_stat = stat_log,
                                    bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
         som_anomaly.label_anomaly()
         anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
@@ -931,7 +942,7 @@ def main():
             normal_list, online_list, col_list,
             standard, window_size, jump_size, test_log,
             xdim, ydim, topo, neighbor, dist, decay, seed,
-            epoch, init_rate, init_radius, subset_net, label, ztest_opt, multiple_test, eta, rho
+            epoch, init_rate, init_radius, subset_net, label, ztest_opt, multiple_test, eta, rho, stat_log
         )
         anomaly_df = pd.DataFrame({".pred": anomaly_pred})
         anomaly_df.to_csv(output_file, index = False, header = False)
