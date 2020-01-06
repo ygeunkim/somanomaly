@@ -4,6 +4,7 @@
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/somanomaly/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/window.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -271,6 +272,9 @@
       <workItem from="1577927248846" duration="681000" />
       <workItem from="1577928882416" duration="1520000" />
       <workItem from="1577956656877" duration="5641000" />
+      <workItem from="1578014114915" duration="2805000" />
+      <workItem from="1578028434469" duration="1038000" />
+      <workItem from="1578317384130" duration="90000" />
     </task>
     <servers />
   </component>
@@ -306,12 +310,12 @@
     </state>
     <state x="501" y="141" key="SettingsEditor/0.0.1792.1120@0.0.1792.1120" timestamp="1577336705065" />
     <state x="397" y="170" key="SettingsEditor/0.23.1792.1017@0.23.1792.1017" timestamp="1577173610581" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog" timestamp="1577956658239">
+    <state x="627" y="369" key="com.intellij.ide.util.TipDialog" timestamp="1578317384069">
       <screen x="0" y="0" width="1792" height="1120" />
     </state>
     <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-1048.0.1048.770/-3608.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1577354663143" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1577956658239" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/0.0.1792.1120@0.0.1792.1120" timestamp="1577336385305" />
+    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1578317384069" />
+    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/0.0.1792.1120@0.0.1792.1120" timestamp="1578028434054" />
     <state x="627" y="358" key="com.intellij.ide.util.TipDialog/0.23.1792.1017@0.23.1792.1017" timestamp="1577173296029" />
     <state x="717" y="347" key="com.intellij.ide.util.TipDialog/0.23.2048.984@0.23.2048.984" timestamp="1575380801345" />
   </component>

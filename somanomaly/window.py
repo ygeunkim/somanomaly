@@ -27,7 +27,7 @@ class SomData:
         self.window_data = np.empty((win_num, window_size, data.shape[1]))
         for i in tqdm(range(win_num), desc = "bind window"):
             if log_scale:
-                self.window_data[i, :, :] = np.log(data[range(i * jump_size, i * jump_size + window_size), :] + 1)
+                self.window_data[i, :, :] = np.log(data[range(i * jump_size, i * jump_size + window_size), :] + 1e-5)
             else:
                 self.window_data[i, :, :] = data[range(i * jump_size, i * jump_size + window_size), :]
 

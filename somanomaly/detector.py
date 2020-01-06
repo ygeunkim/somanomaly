@@ -100,7 +100,7 @@ class SomDetect:
 
     def detect_anomaly(
             self, label = None, threshold = "cltlind",
-            level = .9, clt_test = "bh", mfdr = None, power = None, log_stat = False,
+            level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False,
             bootstrap = 1, clt_map = False, neighbor = None
     ):
         """
@@ -130,7 +130,7 @@ class SomDetect:
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        test_types = ["bh", "invest", "gai", "lord"]
+        test_types = ["bon", "bh", "invest", "gai", "lord"]
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
@@ -269,16 +269,22 @@ class SomDetect:
                 if log_stat:
                     self.dstat = np.log2(self.dstat + 1)
             else:
-                # MLE of mean of distribution - set as true
+                # true theta
                 theta0 = np.average(normal_distance[:, 0], weights = proj_count)
-                self.dstat = 2 * net_stand.shape[0] * dist_anomaly / theta0
+                # theta <= theta0 vs theta > theta0
+                # 2 * dsum / theta0 ~ chi2(2n)
+                self.dstat = 2 * proj_count.shape[0] * dist_anomaly / theta0
             # pvalue
             if threshold == "clt" or "cltlind":
                 pvalue = 1 - norm.cdf(self.dstat)
             else:
-                pvalue = 2 * (1 - chi2.cdf(self.dstat, df = 2 * net_stand.shape[0]))
+                pvalue = 2 * (1 - chi2.cdf(self.dstat, df = 2 * proj_count.shape[0]))
             # multiple test
-            if clt_test == "bh":
+            if clt_test == "bon":
+                alpha = 1 - level
+                # pj <= alpha * 2^(-j)
+                som_anomaly = pvalue <= alpha * pow(.5, np.arange(self.som_te.window_data.shape[0]) + 1)
+            elif clt_test == "bh":
                 alpha = 1 - level
                 alpha /= self.som_te.window_data.shape[0]
                 # Benjamini–Hochberg - i * alpha / N for ordered p-value
