@@ -43,7 +43,7 @@ class SomDetect:
         :param standard: standardize both data sets
         :param window_size: window size
         :param jump_size: shift size
-        :param test_log: log-scale streaming series
+        :param test_log: log-scale normal series
         :param xdim: Number of x-grid
         :param ydim: Number of y-grid
         :param topo: Topology of output space - rectangular or hexagonal
@@ -52,8 +52,8 @@ class SomDetect:
         :param decay: decaying learning rate and radius - exponential or linear
         :param seed: Random seed
         """
-        self.som_tr = SomData(path_normal, cols, window_size, jump_size, False)
-        self.som_te = SomData(path_online, cols, window_size, jump_size, test_log)
+        self.som_tr = SomData(path_normal, cols, window_size, jump_size, test_log)
+        self.som_te = SomData(path_online, cols, window_size, jump_size, False)
         self.som_grid = kohonen(self.som_tr.window_data, xdim, ydim, topo, neighbor, dist, decay, seed)
         self.win_size = window_size
         self.jump = jump_size
