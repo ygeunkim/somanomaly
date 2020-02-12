@@ -6,11 +6,11 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="SomAnomaly",
     version="1.0.0",
-    author="Young Geun Kim",
-    author_email="dudrms33@g.skku.edu",
+    author="ADEPT: Multivariate Time Series Anomaly Detection Using Forecasting Error Patterns",
+    author_email="https://icml.cc",
     description="Anomaly detection using self-organizing maps",
     long_description=long_description,
-    url="https://github.com/ygeunkim/somanomaly",
+    url="https://icml.cc",
     license="LICENSE",
     packages=setuptools.find_packages(),
     classifiers=[

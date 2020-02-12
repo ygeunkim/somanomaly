@@ -4,9 +4,7 @@ import argparse
 import time
 import plotly.graph_objs as go
 import matplotlib.pyplot as plt
-from scipy.stats import chi2
 from scipy.stats import norm
-from scipy.stats import f
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
@@ -125,14 +123,6 @@ class SomDetect:
                 self.som_grid.project = normal_distance[:, 1]
             # mapped nodes
             normal_project, proj_count = np.unique(self.som_grid.project, return_counts=True)
-            # neighboring nodes
-            # if neighbor is not None:
-            #     proj_dist = np.argwhere(
-            #         self.som_grid.dci[normal_project.astype(int), :] <= neighbor
-            #     )
-            #     normal_project, neighbor_count = np.unique(proj_dist[:, 0], return_counts=True)
-            #     proj_count = np.repeat(proj_count, neighbor_count)
-            #     normal_project = np.unique(proj_dist[:, 1])
             # corresponding codebook
             net_stand = self.net[normal_project.astype(int), :, :]
         else:
@@ -151,9 +141,6 @@ class SomDetect:
         sn = np.sqrt(
             np.sum(normal_distance[:, 1] * proj_count)
         )
-        # sn = np.sqrt(
-        #     net_stand.shape[0] * np.average(normal_distance[:, 1], weights = proj_count)
-        # )
         # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
         self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
         # pvalue
@@ -520,6 +507,10 @@ def main():
         dstat_file = output_list[1]
     else:
         output_file = args.output
+    cols = None
+    if args.column is not None:
+        cols = str(args.column).strip().split(",")
+        cols = range(int(cols[0]), int(cols[1]))
     if args.eval is not None:
         print_eval = True
         true_file = args.eval

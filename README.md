@@ -1,6 +1,6 @@
-# <img alt="SomAnomaly" src="docs/somanomaly_icon_v2.png" height="60">
+# <img alt="SomAnomaly" src="docs/somanomaly_icon.png" height="60">
 
-**Online SOM Detector** - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
+Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
 ## Building
 
@@ -16,7 +16,6 @@ This module requires the following.
 - argparse: [github.com/ThomasWaldmann/argparse](https://github.com/ThomasWaldmann/argparse/)
 
 ```
-git clone https://github.com/ygeunkim/somanomaly.git
 cd somanomaly
 python setup.py build
 python setup.py install
@@ -24,16 +23,15 @@ python setup.py install
 
 ### Usage
 
-In command line, you can run *Online SOM detector* using `somanomaly/detector.py`:
+In command line, you can run *SomAnomaly* using `somanomaly/detector.py`:
 
 ```
 cd somanomaly
-python detector.py [-h] [-c COLUMN] [-e EVAL] [--standardize] [-w WINDOW]
-                   [-j JUMP] [-x XGRID] [-y YGRID] [-p PROTOTYPE]
+python detector.py [-h] [-c COLUMN] [-e EVAL] [--log] [--standardize]
+                   [-w WINDOW] [-j JUMP] [-x XGRID] [-y YGRID] [-p PROTOTYPE]
                    [-n NEIGHBORHOOD] [-m METRIC] [-d DECAY] [-s SEED]
-                   [-i ITER] [-a ALPHA] [-r RADIUS] [--subset SUBSET]
-                   [-l LABEL] [-u THRESHOLD] [-b BOOTSTRAP] [-o] [--find FIND]
-                   [-q MULTIPLE] [-1] [-2] [-3]
+                   [-i ITER] [-a ALPHA] [-r RADIUS] [-l LABEL] [-u THRESHOLD]
+                   [-o] [-q MULTIPLE] [-1] [-2] [-3]
                    normal online output
 ```
 
@@ -50,8 +48,8 @@ The following is a description of each argument.
 For now, this function reads only `*.csv` files using `pandas.read_csv()`
 
 ```
-normal  Normal dataset file
-online  Online dataset file
+normal  Training dataset file
+online  Test dataset file
 ```
 
 Warning: *this function requires exactly same form of both files.
@@ -92,14 +90,6 @@ If this file is provided, evaluation result (precision, recall, and F1-score) wi
 
 ```
 --standardize  Standardize both data sets
-```
-
-Options for training and detection have default values, respectively.
-So all these are optional arguments.
-
-#### Training SOM
-
-```
 -w, --window  Window size (Default = 30)
 -j, --jump  Shift size (Default = 30)
 -x, --xgrid  Number of x-grid (Default = 50)
@@ -112,26 +102,22 @@ So all these are optional arguments.
 -i, --iter  Epoch number (Default = 50)
 -a, --alpha  Initial learning rate (Default = 0.1)
 -r, --radius  Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)
---subset  Subset weight matrix set among epochs (Default = epoch number)
 ```
 
 #### Detecting anomaly
 
+For anomaly detection, we use test based on Gaussian distribution.
+
 ```
 -l, --label  Anomaly and normal labels, e.g. 1,0 (default)
--u, --threshold  Threshold method - cltlind (default), clt, anova, ztest, mean, quantile, radius, inv_som, kmeans, hclust
+-u, --threshold  Significant level for the test
 ```
 
-In case of `ztest` or `ztest_proj` of `-m`, you can specify quantile simultaneously. The default is `.9`.
-If you give, for instance, `-m ztest,0.95`, you can use 0.95 chi-squared quantile.
-
-The following are additional arguments that can adjust `clt` and `cltlind` thresholds.
+Multiple testing:
 
 ```
--b, --bootstrap  Bootstrap sample numbers (Default = 1, bootstrap not performed)
 -o, --overfit  Use only mapped codebook if specified
---find  When using mapped codebook, their neighboring nodes also can be used. - radius for neighbor (Default = None, only themselves)
--q, --multiple  Multiple testing method - gai (default), invest, or bh
+-q, --multiple  Multiple testing method - gai (default), invest, bon, or bh
 ``` 
 
 Both `invest` and `gai` have option for the detector. See each
@@ -150,52 +136,3 @@ You can see the following plots if writing each parameter.
 -2, --heat  Plot heatmap of SOM
 -3, --pred  Plot heatmap of projection onto normal SOM
 ```
-
-***
-
-## Motivation
-
-### Pre-processing
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/som_data.png" >
-</p>
-
-Given multivariate time series, we are trying to find outlying pattern. This represents anomaly.
-
-1. Slide window
-2. Bind the windows
-
-Then we get 3d tensor. Now fit Self-organizing maps to this form of data-set. Different with ordinary SOM structure, we use input **matrices**, not vectors.
-
-The algorithm requires computing *distance between matrices* - input matrix and codebook matrix.
-
-### Anomaly detection
-
-Using **distances from codebook matrices**, think the windows that have large distance values from the codebook matrices as anomalies.
-
-- Average distances
-- Clustering
-
-#### Central limit theorem
-
-To know some window, i.e. an observation in the tensor is anomaly,
-
-1. Compute every distance versus codebook matrix and average.
-2. If the SomAnomaly statistic is larger than Z-quantile, the window is detected as anomaly.
-3. Statistical test for each window is conducted, so we correct the significance level appropriately. 
-
-<p align="center">
-    <img width="70%" height="43.26%" src="docs/som_clt.png">
-</p>
-
-#### 2-means clustering
-
-Perform 2-means clustering for codebook matrices and online data-set.
-
-1. Set codebook matrices by group 0. This group indicates normal and does not change.
-2. Randomly assign group 0 or 1 for online data-set.
-3. Iterate until cluster converges:
-    1. For each cluster, compute centroid.
-    2. Compute distance between centroid and every online matrix.
-    3. Assign each online observation matrix to the group with smaller distance.

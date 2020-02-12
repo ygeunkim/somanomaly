@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
-import plotly.tools as tls
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from sklearn.utils.extmath import randomized_svd
