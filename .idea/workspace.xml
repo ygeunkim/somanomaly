@@ -3,11 +3,15 @@
   <component name="ChangeListManager">
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/distance.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/input_mat.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/node_detect.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/radius_detect.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/som_clt.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/som_detect.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/somanomaly_icon_v2.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ztest_detect.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_anomaly.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -289,6 +293,8 @@
       <workItem from="1581388195934" duration="1848000" />
       <workItem from="1581483766372" duration="4292000" />
       <workItem from="1581488395257" duration="1306000" />
+      <workItem from="1581919062471" duration="413000" />
+      <workItem from="1581919646260" duration="131000" />
     </task>
     <servers />
   </component>
@@ -324,13 +330,13 @@
     </state>
     <state x="501" y="141" key="SettingsEditor/0.0.1792.1120@0.0.1792.1120" timestamp="1577336705065" />
     <state x="397" y="170" key="SettingsEditor/0.23.1792.1017@0.23.1792.1017" timestamp="1577173610581" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog" timestamp="1581488400536">
+    <state x="627" y="369" key="com.intellij.ide.util.TipDialog" timestamp="1581919646830">
       <screen x="0" y="0" width="1792" height="1120" />
     </state>
     <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-1048.0.1048.770/-3608.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1577354663143" />
     <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1080/0.0.1792.1120@0.0.1792.1120" timestamp="1579060335307" />
     <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1578317384069" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/0.0.1792.1120@0.0.1792.1120" timestamp="1581488400536" />
+    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/0.0.1792.1120@0.0.1792.1120" timestamp="1581919646830" />
     <state x="896" y="356" key="com.intellij.ide.util.TipDialog/0.0.2560.1080/2560.0.1792.1120@0.0.2560.1080" timestamp="1579676123853" />
     <state x="896" y="474" key="com.intellij.ide.util.TipDialog/0.0.2560.1440/2560.0.1792.1120@0.0.2560.1440" timestamp="1580625524307" />
     <state x="896" y="474" key="com.intellij.ide.util.TipDialog/0.0.2560.1440@0.0.2560.1440" timestamp="1579422745952" />
