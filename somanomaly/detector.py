@@ -81,22 +81,23 @@ class SomDetect:
         # plot
         self.project = None
 
-    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None, subset_net = None):
+    def learn_normal(self, epoch = 100, init_rate = None, init_radius = None):
         """
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
-        :param subset_net: choose specific weight matrix set among epochs
         """
-        if subset_net is None:
-            subset_net = epoch
-        if epoch < subset_net:
-            raise ValueError("epoch should be same or larger than subset_net")
-        self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius, keep_net = epoch > subset_net)
-        if epoch == subset_net:
-            self.net = self.som_grid.net
-        else:
-            self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
+        # if subset_net is None:
+        #     subset_net = epoch
+        # if epoch < subset_net:
+        #     raise ValueError("epoch should be same or larger than subset_net")
+        # self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius, keep_net = epoch > subset_net)
+        # if epoch == subset_net:
+        #     self.net = self.som_grid.net
+        # else:
+        #     self.net = self.som_grid.net_path[subset_net - 1, :, :, :]
+        self.som_grid.som(self.som_tr.window_data, epoch, init_rate, init_radius, keep_net = False)
+        self.net = self.som_grid.net
 
     def detect_anomaly(
             self, label = None, threshold = "cltlind",
@@ -124,9 +125,8 @@ class SomDetect:
         thr_types = [
             "quantile", "radius", "mean", "inv_som",
             "kmeans", "hclust",
-            "ztest",
-            "clt", "cltlind", "explrt",
-            "anova"
+            "cltlind",
+            "bayes"
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
@@ -199,18 +199,7 @@ class SomDetect:
             som_anomaly[cluster == 0] = True
         elif threshold == "hclust":
             som_anomaly = self.hclust_divisive()
-        elif threshold == "ztest":
-            net_stand = self.net
-            # standardize codebook otherwise input standardized
-            if not self.standard:
-                net_stand = self.net.reshape((-1, self.net.shape[2]))
-                scaler = StandardScaler()
-                net_stand = scaler.fit_transform(net_stand).reshape(self.net.shape)
-            dist_anomaly = np.asarray(
-                [self.dist_codebook(net_stand, k) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
-            )
-            som_anomaly = dist_anomaly > chi2.ppf(level, self.som_te.window_data.shape[1])
-        elif threshold == "clt" or threshold == "cltlind" or threshold == "explrt":
+        elif threshold == "cltlind":
             if clt_map:
                 if self.som_grid.project is None:
                     normal_distance = np.asarray(
@@ -245,40 +234,19 @@ class SomDetect:
             dist_anomaly = np.asarray(
                 [self.dist_codebook(net_stand, k, w = proj_count) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
             )
-            if threshold == "clt":
-                # mu = mean(mu1, ..., muN)
-                clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
-                # sigma = sqrt(sigma1 ** 2 + ... + sigmaN ** 2) / N
-                clt_sd = np.sqrt(
-                    np.sum(
-                        normal_distance[:, 1] * proj_count
-                    )
-                ) / net_stand.shape[0]
-                # sqrt(n) (dbar - mu) -> N(0, sigma2)
-                self.dstat = np.sqrt(net_stand.shape[0]) * (dist_anomaly - clt_mean) / clt_sd
-            elif threshold == "cltlind":
-                clt_mean = np.average(normal_distance[:, 0], weights = proj_count)
-                sn = np.sqrt(
-                    np.sum(normal_distance[:, 1] * proj_count)
-                )
-                # sn = np.sqrt(
-                #     net_stand.shape[0] * np.average(normal_distance[:, 1], weights = proj_count)
-                # )
-                # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
-                self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
-                if log_stat:
-                    self.dstat = np.log2(self.dstat + 1)
-            else:
-                # true theta
-                theta0 = np.average(normal_distance[:, 0], weights = proj_count)
-                # theta <= theta0 vs theta > theta0
-                # 2 * dsum / theta0 ~ chi2(2n)
-                self.dstat = 2 * proj_count.shape[0] * dist_anomaly / theta0
+            clt_mean = np.average(normal_distance[:, 0], weights=proj_count)
+            sn = np.sqrt(
+                np.sum(normal_distance[:, 1] * proj_count)
+            )
+            # sn = np.sqrt(
+            #     net_stand.shape[0] * np.average(normal_distance[:, 1], weights = proj_count)
+            # )
+            # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
+            self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
+            if log_stat:
+                self.dstat = np.log2(self.dstat + 1)
             # pvalue
-            if threshold == "clt" or "cltlind":
-                pvalue = 1 - norm.cdf(self.dstat)
-            else:
-                pvalue = 2 * (1 - chi2.cdf(self.dstat, df = 2 * proj_count.shape[0]))
+            pvalue = 1 - norm.cdf(self.dstat)
             # multiple test
             if clt_test == "bon":
                 alpha = 1 - level
@@ -366,34 +334,6 @@ class SomDetect:
                         wealth[j] - alphaj + rj * alpha
                     )
                 som_anomaly = som_anomaly[1:]
-        elif threshold == "anova":
-            if bootstrap == 1:
-                normal_distance = np.asarray(
-                    [self.dist_normal(self.net, j) for j in tqdm(range(self.net.shape[0]), desc = "pseudo-population")]
-                )
-            else:
-                normal_distance = np.asarray(
-                    [self.dist_bootstrap(self.net, j, bootstrap) for j in tqdm(range(self.net.shape[0]), desc = "pseudo-population")]
-                )
-            pop_mean = np.average(normal_distance[:, 0])
-            # treatment - obs of online set
-            trt = self.som_te.window_data.shape[0]
-            dij = np.empty((self.net.shape[0], trt))
-            for k in tqdm(range(trt), desc = "treatment structure"):
-                dij[:, k] = self.dist_dij(self.net, k)
-            num = np.sum(dij.shape)
-            # treatment mean
-            dist_anomaly = np.average(dij, axis = 0)
-            # post-anova comparison of means - scheffe
-            mse = np.sum(
-                np.square(dij - dist_anomaly) / (num - trt)
-            )
-            std_err = np.sqrt(
-                mse / self.net.shape[0]
-            )
-            # (dbar - sec * sqrt((a-1) * F(a-1, N-a), dbar - sec * sqrt((a-1) * F(a-1, N-a))
-            dstat = (dist_anomaly - pop_mean) / std_err
-            som_anomaly = dstat >= np.sqrt((trt - 1) * f.ppf(level, trt - 1, num - trt))
         # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
@@ -626,7 +566,7 @@ class SomDetect:
                      window_size = 60, jump_size = 60, test_log = False,
                      xdim = None, ydim = None, topo = "rectangular", neighbor = "gaussian",
                      dist = "frobenius", decay = "exponential", seed = None,
-                     epoch = 100, init_rate = None, init_radius = None, subset_net = None,
+                     epoch = 100, init_rate = None, init_radius = None,
                      label = None, level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False):
         """
         :param normal_list: normal series files
@@ -646,7 +586,6 @@ class SomDetect:
         :param epoch: epoch number
         :param init_rate: initial learning rate
         :param init_radius: initial radius of BMU neighborhood
-        :param subset_net: choose specific weight matrix set among epochs
         :param label: anomaly and normal label list
         :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
         :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
@@ -665,7 +604,7 @@ class SomDetect:
                 normal_list[b], online_list[b], range(col_list[b, 0], col_list[b, 1]),
                 standard, window_size, jump_size, test_log, xdim, ydim, topo, neighbor, dist, decay, seed
             )
-            som_anomaly.learn_normal(epoch, init_rate, init_radius, subset_net)
+            som_anomaly.learn_normal(epoch, init_rate, init_radius)
             som_anomaly.detect_anomaly(label, threshold = "cltlind", level = level, clt_test = clt_test,
                                        mfdr = mfdr, power = power, log_stat = log_stat,
                                        bootstrap = 1, clt_map = True, neighbor = None)
@@ -794,11 +733,11 @@ def main():
         type = float,
         help = "Initial radius of BMU neighborhood (Default = 2/3 quantile of every distance between nodes)"
     )
-    parser.add_argument(
-        "--subset",
-        type = int,
-        help = "Subset codebook matrix set among epochs (Default = epoch number)"
-    )
+    # parser.add_argument(
+    #     "--subset",
+    #     type = int,
+    #     help = "Subset codebook matrix set among epochs (Default = epoch number)"
+    # )
     # Anomaly detection
     parser.add_argument(
         "-l", "--label",
@@ -895,11 +834,11 @@ def main():
     decay = args.decay
     seed = args.seed
     epoch = args.iter
-    subset_net = epoch
+    # subset_net = epoch
     init_rate = args.alpha
     init_radius = args.radius
-    if args.subset is not None:
-        subset_net = args.subset
+    # if args.subset is not None:
+    #     subset_net = args.subset
     label = str(args.label).strip().split(",")
     label = [int(label[0]), int(label[1])]
     threshold_list = None
@@ -940,7 +879,7 @@ def main():
         som_anomaly = SomDetect(normal_file, online_file, cols, standard,
                                 window_size, jump_size, test_log,
                                 xdim, ydim, topo, neighbor, dist, decay, seed)
-        som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius, subset_net = subset_net)
+        som_anomaly.learn_normal(epoch = epoch, init_rate = init_rate, init_radius = init_radius)
         som_anomaly.detect_anomaly(label = label, threshold = threshold,
                                    level = ztest_opt, clt_test = multiple_test, mfdr = eta, power = rho, log_stat = stat_log,
                                    bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
@@ -957,7 +896,7 @@ def main():
             normal_list, online_list, col_list,
             standard, window_size, jump_size, test_log,
             xdim, ydim, topo, neighbor, dist, decay, seed,
-            epoch, init_rate, init_radius, subset_net, label, ztest_opt, multiple_test, eta, rho, stat_log
+            epoch, init_rate, init_radius, label, ztest_opt, multiple_test, eta, rho, stat_log
         )
         anomaly_df = pd.DataFrame({".pred": anomaly_pred})
         anomaly_df.to_csv(output_file, index = False, header = False)
@@ -1000,8 +939,8 @@ def main():
         print("Decay function: ", decay)
         print("Distance function: ", dist)
         print("Epoch number: ", epoch)
-    if epoch > subset_net:
-        print("Subset weight matrix of: ", subset_net)
+    # if epoch > subset_net:
+    #     print("Subset weight matrix of: ", subset_net)
     print("------------------------------------------")
     if threshold_list is not None:
         print("Anomaly detection by %s of %.3f" %(threshold, ztest_opt))
