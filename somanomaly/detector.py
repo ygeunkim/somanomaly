@@ -125,8 +125,7 @@ class SomDetect:
         thr_types = [
             "quantile", "radius", "mean", "inv_som",
             "kmeans", "hclust",
-            "cltlind",
-            "bayes"
+            "cltlind"
         ]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
