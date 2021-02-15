@@ -4,7 +4,6 @@
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change afterPath="$PROJECT_DIR$/../Time-seriesAwareMetric/.idea/Evaluator.iml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/../Time-seriesAwareMetric/venv/.idea/venv.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -290,6 +289,7 @@
       <workItem from="1613372986062" duration="44000" />
       <workItem from="1613374062251" duration="180000" />
       <workItem from="1613374491342" duration="333000" />
+      <workItem from="1613375149123" duration="232000" />
     </task>
     <servers />
   </component>

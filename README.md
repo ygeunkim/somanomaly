@@ -24,7 +24,7 @@ python setup.py install
 
 ### Usage
 
-In command line, you can run *Online SOM detector* using `somanomaly/detector.py`:
+In command line, you can run *SOMAD* using `somanomaly/detector.py`:
 
 ```
 cd somanomaly
