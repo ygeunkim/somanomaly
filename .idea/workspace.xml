@@ -4,8 +4,12 @@
     <list default="true" id="82d28266-bb70-47b5-a0f5-81547ef17d42" name="Default Changelist" comment="">
       <change afterPath="$PROJECT_DIR$/../Time-seriesAwareMetric/.idea/Evaluator.iml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/../Time-seriesAwareMetric/venv/.idea/venv.iml" afterDir="false" />
+<<<<<<< HEAD
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/somanomaly/detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/somanomaly/detector.py" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+>>>>>>> submit-2
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -285,7 +289,16 @@
       <workItem from="1580625490701" duration="11000" />
       <workItem from="1580625524780" duration="226000" />
       <workItem from="1582549370243" duration="1918000" />
+<<<<<<< HEAD
       <workItem from="1613375874722" duration="517000" />
+=======
+      <workItem from="1582857677197" duration="12000" />
+      <workItem from="1613370469224" duration="47000" />
+      <workItem from="1613372986062" duration="44000" />
+      <workItem from="1613374062251" duration="180000" />
+      <workItem from="1613374491342" duration="333000" />
+      <workItem from="1613375149123" duration="232000" />
+>>>>>>> submit-2
     </task>
     <servers />
   </component>
@@ -309,29 +322,5 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="683" y="292" key="FileChooserDialogImpl" timestamp="1577173362717">
-      <screen x="0" y="23" width="1792" height="1017" />
-    </state>
-    <state x="683" y="292" key="FileChooserDialogImpl/0.23.1792.1017@0.23.1792.1017" timestamp="1577173362717" />
-    <state x="501" y="141" key="SettingsEditor" timestamp="1577336705065">
-      <screen x="0" y="0" width="1792" height="1120" />
-    </state>
-    <state x="501" y="141" key="SettingsEditor/0.0.1792.1120@0.0.1792.1120" timestamp="1577336705065" />
-    <state x="397" y="170" key="SettingsEditor/0.23.1792.1017@0.23.1792.1017" timestamp="1577173610581" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog" timestamp="1582549371610">
-      <screen x="0" y="0" width="1792" height="1120" />
-    </state>
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-1048.0.1048.770/-3608.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1577354663143" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1080/0.0.1792.1120@0.0.1792.1120" timestamp="1579060335307" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/-2560.0.2560.1440/0.0.1792.1120@0.0.1792.1120" timestamp="1578317384069" />
-    <state x="627" y="369" key="com.intellij.ide.util.TipDialog/0.0.1792.1120@0.0.1792.1120" timestamp="1582549371610" />
-    <state x="896" y="356" key="com.intellij.ide.util.TipDialog/0.0.2560.1080/2560.0.1792.1120@0.0.2560.1080" timestamp="1579676123853" />
-    <state x="896" y="474" key="com.intellij.ide.util.TipDialog/0.0.2560.1440/2560.0.1792.1120@0.0.2560.1440" timestamp="1580625524307" />
-    <state x="896" y="474" key="com.intellij.ide.util.TipDialog/0.0.2560.1440@0.0.2560.1440" timestamp="1579422745952" />
-    <state x="627" y="358" key="com.intellij.ide.util.TipDialog/0.23.1792.1017@0.23.1792.1017" timestamp="1577173296029" />
-    <state x="717" y="347" key="com.intellij.ide.util.TipDialog/0.23.2048.984@0.23.2048.984" timestamp="1575380801345" />
-    <state x="3187" y="369" key="com.intellij.ide.util.TipDialog/0.23.2560.1337/2560.23.1792.1097@2560.23.1792.1097" timestamp="1580625490740" />
   </component>
 </project>

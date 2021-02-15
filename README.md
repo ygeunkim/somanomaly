@@ -1,6 +1,6 @@
 # <img alt="SomAnomaly" src="docs/somanomaly_icon_v2.png" height="60">
 
-**Online SOM Detector** - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
+**SOMAD** (Self Organizing Map for Anomaly Detection) - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
 ## Building
 
@@ -24,7 +24,7 @@ python setup.py install
 
 ### Usage
 
-In command line, you can run *Online SOM detector* using `somanomaly/detector.py`:
+In command line, you can run *SOMAD* using `somanomaly/detector.py`:
 
 ```
 cd somanomaly
@@ -174,8 +174,10 @@ The algorithm requires computing *distance between matrices* - input matrix and 
 
 Using **distances from codebook matrices**, think the windows that have large distance values from the codebook matrices as anomalies.
 
+<!---
 - Average distances
 - Clustering
+-->
 
 #### Central limit theorem
 
@@ -189,6 +191,7 @@ To know some window, i.e. an observation in the tensor is anomaly,
     <img width="70%" height="43.26%" src="docs/som_clt.png">
 </p>
 
+<!---
 #### 2-means clustering
 
 Perform 2-means clustering for codebook matrices and online data-set.
@@ -199,3 +202,4 @@ Perform 2-means clustering for codebook matrices and online data-set.
     1. For each cluster, compute centroid.
     2. Compute distance between centroid and every online matrix.
     3. Assign each online observation matrix to the group with smaller distance.
+-->
