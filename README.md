@@ -2,6 +2,10 @@
 
 **SOMAD** (Self Organizing Map for Anomaly Detection) - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
+This is the source code for the following conference paper:
+
+Kim Y.G., Yun JH., Han S., Kim H.C., Woo S.S. (2021) Revitalizing Self-Organizing Map: Anomaly Detection Using Forecasting Error Patterns. In: Jøsang A., Futcher L., Hagen J. (eds) ICT Systems Security and Privacy Protection. SEC 2021. IFIP Advances in Information and Communication Technology, vol 625. Springer, Cham. [https://doi.org/10.1007/978-3-030-78120-0_25](https://link.springer.com/chapter/10.1007/978-3-030-78120-0_25)
+
 ## Building
 
 This module requires the following.
