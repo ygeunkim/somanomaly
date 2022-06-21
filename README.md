@@ -1,5 +1,9 @@
 # <img alt="SomAnomaly" src="docs/somanomaly_icon_v2.png" height="60">
 
+<!-- badges: start -->
+[![DOI](https://zenodo.org/badge/198335097.svg)](https://zenodo.org/badge/latestdoi/198335097)
+<!-- badges: end -->
+
 **SOMAD** (Self Organizing Map for Anomaly Detection) - Anomaly detection using [Self-Organizing Maps](https://en.wikipedia.org/wiki/Self-organizing_map)
 
 This is the source code for the following conference paper:
