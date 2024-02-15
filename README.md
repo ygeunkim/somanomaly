@@ -35,7 +35,6 @@ python setup.py install
 In command line, you can run *SOMAD* using `somanomaly/detector.py`:
 
 ```
-cd somanomaly
 python main.py [-h] [-c COLUMN] [-e EVAL] [--standardize] [-w WINDOW]
                [-j JUMP] [-x XGRID] [-y YGRID] [-p PROTOTYPE]
                [-n NEIGHBORHOOD] [-m METRIC] [-d DECAY] [-s SEED]
