@@ -816,6 +816,7 @@ def main():
         elif str(args.column).count(",") > 1:
             col_tmp = str(args.column).strip().split(",")
             col_list = np.array(col_tmp).astype(int).reshape((-1, 2))
+    print_eval = False
     if args.eval is not None:
         print_eval = True
         true_file = args.eval
