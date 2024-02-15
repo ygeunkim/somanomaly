@@ -152,217 +152,18 @@ class SomDetect:
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
-        # threshold with mapping
-        # if threshold == "quantile" or threshold == "mean" or threshold == "radius":
-        #     anomaly_threshold = None
-        #     dist_anomaly = None
-        #     # normal data
-        #     if self.som_grid.project is None:
-        #         normal_distance = np.asarray(
-        #             [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mapping")]
-        #         )
-        #         self.som_grid.dist_normal = normal_distance[:, 0]
-        #         self.som_grid.project = normal_distance[:, 1]
-        #     # online data
-        #     if self.project is None:
-        #         som_dist_calc = np.asarray(
-        #             [self.dist_uarray(i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping online set")]
-        #         )
-        #         dist_anomaly = som_dist_calc[:, 0]
-        #         self.project = som_dist_calc[:, 1]
-        #     # thresholding
-        #     if threshold == "quantile":
-        #         anomaly_threshold = np.quantile(self.som_grid.dist_normal, 2/3)
-        #         som_anomaly = dist_anomaly > anomaly_threshold
-        #     elif threshold == "mean":
-        #         anomaly_threshold = np.mean(self.som_grid.dist_normal)
-        #         som_anomaly = dist_anomaly > anomaly_threshold
-        #     elif threshold == "radius":
-        #         anomaly_threshold = neighbor
-        #         normal_project = np.unique(self.som_grid.project)
-        #         from_normal = self.som_grid.dci[normal_project.astype(int), :]
-        #         anomaly_project = np.full(
-        #             (normal_project.shape[0], self.net.shape[0]),
-        #             fill_value = False,
-        #             dtype = bool
-        #         )
-        #         for i in tqdm(range(normal_project.shape[0]), desc = "neighboring"):
-        #             anomaly_project[i, :] = from_normal[i, :].flatten() > anomaly_threshold
-        #         anomaly_node = np.argwhere(anomaly_project.sum(axis = 0, dtype = bool))
-        #         som_anomaly = np.isin(self.project, anomaly_node)
-        # # threshold without mapping
-        # if threshold == "inv_som":
-        #     som_anomaly = self.inverse_som()
-        # elif threshold == "kmeans":
-        #     cluster = np.random.choice(np.arange(2), self.som_te.window_data.shape[0])
-        #     cluster_change = cluster + 1
-        #     centroid1 = np.empty((self.net.shape[1], self.net.shape[2]))
-        #     centroid2 = centroid1
-        #     while not np.array_equal(cluster, cluster_change):
-        #         normal_array = np.append(
-        #             self.net, self.som_te.window_data[cluster == 0, :, :], axis = 0
-        #         )
-        #         anom_array = self.som_te.window_data[cluster == 1, :, :]
-        #         centroid1 = np.mean(normal_array, axis = 0)
-        #         centroid2 = np.mean(anom_array, axis = 0)
-        #         cluster_change = cluster
-        #         for i in range(self.som_te.window_data.shape[0]):
-        #             dist1 = self.dist_mat(self.som_te.window_data[i, :, :], centroid1)
-        #             dist2 = self.dist_mat(self.som_te.window_data[i, :, :], centroid2)
-        #             if dist1 <= dist2:
-        #                 cluster[i] = 0
-        #             else:
-        #                 cluster[i] = 1
-        #     som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
-        #     som_anomaly[cluster == 0] = True
-        # elif threshold == "hclust":
-        #     som_anomaly = self.hclust_divisive()
-        # elif threshold == "cltlind":
-        #     if clt_map:
-        #         if self.som_grid.project is None:
-        #             normal_distance = np.asarray(
-        #                 [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mapping")]
-        #             )
-        #             self.som_grid.dist_normal = normal_distance[:, 0]
-        #             self.som_grid.project = normal_distance[:, 1]
-        #         # mapped nodes
-        #         normal_project, proj_count = np.unique(self.som_grid.project, return_counts = True)
-        #         # neighboring nodes
-        #         if neighbor is not None:
-        #             proj_dist = np.argwhere(
-        #                 self.som_grid.dci[normal_project.astype(int), :] <= neighbor
-        #             )
-        #             normal_project, neighbor_count = np.unique(proj_dist[:, 0], return_counts = True)
-        #             proj_count = np.repeat(proj_count, neighbor_count)
-        #             normal_project = np.unique(proj_dist[:, 1])
-        #         # corresponding codebook
-        #         net_stand = self.net[normal_project.astype(int), :, :]
-        #     else:
-        #         net_stand = self.net
-        #         proj_count = np.repeat(1, self.net.shape[0])
-        #     if bootstrap == 1:
-        #         normal_distance = np.asarray(
-        #             [self.dist_normal(net_stand, j) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
-        #         )
-        #     else:
-        #         normal_distance = np.asarray(
-        #             [self.dist_bootstrap(net_stand, j, bootstrap) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
-        #         )
-        #     # online set
-        #     dist_anomaly = np.asarray(
-        #         [self.dist_codebook(net_stand, k, w = proj_count) for k in tqdm(range(self.som_te.window_data.shape[0]), desc = "codebook distance")]
-        #     )
-        #     clt_mean = np.average(normal_distance[:, 0], weights=proj_count)
-        #     sn = np.sqrt(
-        #         np.sum(normal_distance[:, 1] * proj_count)
-        #     )
-        #     # sn = np.sqrt(
-        #     #     net_stand.shape[0] * np.average(normal_distance[:, 1], weights = proj_count)
-        #     # )
-        #     # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
-        #     self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
-        #     if log_stat:
-        #         self.dstat = np.log2(self.dstat + 1)
-        #     # pvalue
-        #     pvalue = 1 - norm.cdf(self.dstat)
-        #     # multiple test
-        #     if clt_test == "bon":
-        #         alpha = 1 - level
-        #         # pj <= alpha * 2^(-j)
-        #         som_anomaly = pvalue <= alpha * pow(.5, np.arange(self.som_te.window_data.shape[0]) + 1)
-        #     elif clt_test == "bh":
-        #         alpha = 1 - level
-        #         alpha /= self.som_te.window_data.shape[0]
-        #         # Benjamini–Hochberg - i * alpha / N for ordered p-value
-        #         alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
-        #         # Benjamini–Hochberg 1 find the largest k - p(k) <= alpha(k)
-        #         # 2 reject every H(j), j = 1, ..., k
-        #         p_ordered = np.argsort(pvalue)
-        #         test = np.argwhere(pvalue[p_ordered] <= alpha)
-        #         som_anomaly = np.full(self.som_te.window_data.shape[0], fill_value = False, dtype = bool)
-        #         if test.shape[0] != 0:
-        #             test_k = np.max(test)
-        #             som_anomaly[p_ordered[:(test_k + 1)]] = True
-        #     elif clt_test == "invest":
-        #         alpha = 1 - level
-        #         if mfdr is None:
-        #             mfdr = 1 - alpha
-        #         # alpha-investing
-        #         wealth = alpha * mfdr
-        #         som_anomaly = True
-        #         k = 0
-        #         for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
-        #             h0 = j + 1
-        #             alphaj = wealth / (1 + h0 - k)
-        #             rj = pvalue[j] <= alphaj # boolean - 1 if reject, 0 if accept
-        #             som_anomaly = np.append(som_anomaly, rj)
-        #             wealth += - (1 - rj) * alphaj / (1 - alphaj) + rj * alpha
-        #             # wealth += (1 - rj) * np.log(1 - alphaj) + rj * (alpha + np.log(1 - pvalue[j]))
-        #             k = (1 - rj) * k + rj * h0 # the most recently rejected hypothesis
-        #         som_anomaly = som_anomaly[1:]
-        #     elif clt_test == "gai":
-        #         alpha = 1 - level
-        #         # upper bound on the power
-        #         if power is None:
-        #             power = 1
-        #         if mfdr is None:
-        #             mfdr = 1 - alpha
-        #         # W(0)
-        #         wealth = alpha * mfdr
-        #         som_anomaly = True
-        #         for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "gai"):
-        #             # phi(k) = w(k - 1) / 10, k = 1, 2, ...
-        #             # relative scheme - until w(j) < w(0) / 1000
-        #             # relative200 scheme - until 200 tests
-        #             phi = wealth / 10
-        #             # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
-        #             # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
-        #             alphaj = (phi * power) / (phi + power)
-        #             rj = pvalue[j] <= alphaj
-        #             som_anomaly = np.append(som_anomaly, rj)
-        #             # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
-        #             psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
-        #             # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
-        #             wealth += -phi + rj * psi
-        #         som_anomaly = som_anomaly[1:]
-        #     elif clt_test == "lord":
-        #         alpha = 1 - level
-        #         if mfdr is None:
-        #             mfdr = 1 - alpha
-        #         som_anomaly = True
-        #         # W(0)
-        #         wealth = np.array([alpha * mfdr])
-        #         # last discovery time
-        #         tau = 0
-        #         # gamma seq of LORD3
-        #         gamma = []
-        #         for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "lord"):
-        #             gamma = np.append(
-        #                 gamma,
-        #                 .0772 * np.log(np.maximum(j + 1, 2)) / ((j + 1) * np.exp(np.sqrt(np.log(j + 1))))
-        #             )
-        #             # alpha(j) = gamma(j - tau) * w(tau)
-        #             alphaj = gamma[j - tau] * wealth[tau]
-        #             rj = pvalue[j] <= alphaj
-        #             som_anomaly = np.append(som_anomaly, rj)
-        #             tau = rj * j
-        #             # w(j) = w(j - 1) - alpha(j) + R(j) * alpha
-        #             wealth = np.append(
-        #                 wealth,
-        #                 wealth[j] - alphaj + rj * alpha
-        #             )
-        #         som_anomaly = som_anomaly[1:]
-        # # label
         detector = self.init_detector(threshold)
-        # som_anomaly = detector.is_anomaly()
+        # threshold with mapping
         if threshold == "quantile" or threshold == "mean" or threshold == "radius":
             som_anomaly = detector.is_anomaly(neighbor)
+        # threshold without mapping
         elif threshold == "inv_som":
             som_anomaly = detector.is_anomaly()
         elif threshold == "kmeans" or threshold == "hclust":
             som_anomaly = detector.is_anomaly()
         elif threshold == "cltlind":
             som_anomaly = detector.is_anomaly(level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
+        # label
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 
@@ -373,32 +174,6 @@ class SomDetect:
         """
         dist_wt = np.asarray([self.som_grid.dist_mat(self.som_te.window_data, index, j) for j in tqdm(range(self.net.shape[0]), desc = "bmu")])
         return np.min(dist_wt), np.argmin(dist_wt)
-
-    # def dist_codebook(self, codebook, index, w = None):
-    #     """
-    #     :param codebook: transformed codebook matrices
-    #     :param index: Row index for online data set
-    #     :param w: Weight for average
-    #     :return: average distance between online data set and weight matrix
-    #     """
-    #     net_num = codebook.shape[0]
-    #     dist_wt = np.asarray(
-    #         [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
-    #     )
-    #     if w is None:
-    #         w = np.repeat(1, net_num)
-    #     return np.average(dist_wt, weights = w)
-
-    # def dist_normal(self, codebook, node):
-    #     """
-    #     :param codebook: transformed codebook matrices
-    #     :param node: node index
-    #     :return: average and sd of distances between normal som matrix and chosen weight matrix
-    #     """
-    #     dist_wt = np.asarray(
-    #         [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
-    #     )
-    #     return np.average(dist_wt), np.var(dist_wt)
 
     def dist_dij(self, codebook, index):
         """
@@ -469,86 +244,6 @@ class SomDetect:
             w = s / s.sum()
             ss = np.multiply(vh, w).dot(vh.T)
             return np.sqrt(np.trace(ss))
-
-    # def inverse_som(self):
-    #     """
-    #     :return: SOM online data set to codebook matrix -> True if empty grid (anomaly)
-    #     """
-    #     n = self.som_te.window_data.shape[0]
-    #     if np.sqrt(n).is_integer():
-    #         xdim = np.sqrt(n)
-    #         ydim = xdim
-    #     else:
-    #         xdim = int(np.sqrt(n))
-    #         ydim = n / xdim
-    #         while not ydim.is_integer():
-    #             xdim -= 1
-    #             ydim = n / xdim
-    #     online_kohonen = kohonen(
-    #         data = self.net, xdim = int(xdim), ydim = int(ydim), topo = self.topo,
-    #         neighbor = self.h, dist = self.d, decay = self.decay
-    #     )
-    #     online_kohonen.net = self.som_te.window_data
-    #     online_kohonen.som(
-    #         data = self.net, epoch = self.som_grid.epoch,
-    #         init_rate = self.som_grid.initial_learn, init_radius = self.som_grid.initial_r
-    #     )
-    #     if online_kohonen.project is None:
-    #         online_distance = np.asarray(
-    #             [online_kohonen.dist_weight(self.som_te.window_data, i) for i in tqdm(range(self.som_te.window_data.shape[0]), desc="mapping")]
-    #         )
-    #         online_kohonen.project = online_distance[:, 1]
-    #     som_map = np.arange(n)
-    #     return np.isin(som_map, online_kohonen.project, invert = True)
-
-    # def hclust_divisive(self):
-    #     """
-    #     :return: divisive hierarchical clustering
-    #     """
-    #     dim1 = self.net.shape[0]
-    #     dim2 = self.som_te.window_data.shape[0]
-    #     # distances between codebook cluster and online observations
-    #     wt_dist = np.empty(dim2)
-    #     for i in tqdm(range(dim2), desc = "codebook vs online"):
-    #         wt_dist[i] = np.average([self.dist_mat(self.net[j, :, :], self.som_te.window_data[i, :, :]) for j in range(dim1)])
-    #     # distance matrix among online observations
-    #     online_pair = np.array(
-    #         np.meshgrid(
-    #             np.arange(dim2),
-    #             np.arange(dim2)
-    #         )
-    #     ).reshape((2, dim2 * dim2)).T
-    #     to_fill = online_pair[online_pair[:, 0] < online_pair[:, 1]]
-    #     data_dist = np.zeros((dim2, dim2))
-    #     for i in tqdm(range(to_fill.shape[0]), desc = "online distance"):
-    #         data_dist[to_fill[i, 0], to_fill[i, 1]] = self.dist_mat(
-    #             self.som_te.window_data[to_fill[i, 0], :, :],
-    #             self.som_te.window_data[to_fill[i, 1], :, :]
-    #         )
-    #     data_dist = data_dist + data_dist.T
-    #     # append first column and row as codebook cluster
-    #     ave_linkage = np.empty((1 + dim2, 1 + dim2))
-    #     ave_linkage[:, range(1, 1 + dim2)] = np.append(wt_dist, data_dist).reshape((1 + dim2, dim2))
-    #     ave_linkage[:, 0] = np.append(0, wt_dist)
-    #     # choose h cluster
-    #     h_cluster = np.argmax(
-    #         ave_linkage.mean(axis=1)
-    #     )
-    #     # send to cluster h until ave_dist from h > ave_dist from g
-    #     h_diff = 1
-    #     while h_diff >= 0:
-    #         if h_cluster.ndim == 0:
-    #             test = ave_linkage[:, h_cluster.astype(int)] - np.delete(ave_linkage, h_cluster, axis = 1).mean(axis = 1)
-    #         else:
-    #             test = ave_linkage[:, h_cluster.astype(int)].mean(axis = 1) - np.delete(ave_linkage, h_cluster, axis = 1).mean(axis = 1)
-    #         h_diff = np.max(test)
-    #         h_cluster = np.append(h_cluster, np.argmax(test))
-    #     h_cluster = h_cluster[:-1]
-    #     g_cluster = np.arange(ave_linkage.shape[0])
-    #     divisive = np.isin(g_cluster, h_cluster)
-    #     if not divisive[0]:
-    #         divisive = np.invert(divisive)
-    #     return np.delete(divisive, 0)
 
     def label_anomaly(self):
         win_size = self.win_size
@@ -697,9 +392,6 @@ class MappingScore(ScoreStrategy):
         thr_types = ["quantile", "radius", "mean"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        # self.threshold = threshold
-        # self.som_grid = som_grid
-        # self.project = None
 
     def is_anomaly(self, neighbor):
         """
@@ -758,13 +450,10 @@ class EmptyScore(ScoreStrategy):
         :return: Anomaly?
         """
         super().__init__(threshold, som_grid, som_te, net)
-        # self.threshold = threshold
-        # self.som_grid = som_grid
         self.topo = topo
         self.h = neighbor
         self.d = dist
         self.decay = decay
-        # self.net = net
     
     def is_anomaly(self):
         """
