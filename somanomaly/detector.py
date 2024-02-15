@@ -471,6 +471,18 @@ class SomDetect:
             online_kohonen.project = online_distance[:, 1]
         som_map = np.arange(n)
         return np.isin(som_map, online_kohonen.project, invert = True)
+    
+    def mixture_clust(self):
+        """
+        :return: Bayesian mixture clustering
+        """
+        pass
+
+    def test_bayes(self):
+        """
+        :return: Bayesian model selection
+        """
+        pass
 
     def hclust_divisive(self):
         """
