@@ -78,9 +78,20 @@ class SomDetect:
         # plot
         self.project = None
 
-    def init_detector(self, threshold = "cltlind"):
+    def init_detector(
+        self, threshold = "cltlind", level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False,
+        bootstrap = 1, clt_map = False, neighbor = None
+    ):
         """
         :param threshold: threshold for detection - mean, quantile, radius, kmeans, ztest, clt, cltlind, or anova
+        :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
+        :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
+        :param mfdr: eta of alpha-investing
+        :param power: rho of GAI
+        :param log_stat: log2 transform the stat
+        :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
+        :param clt_map: use mapped codebook for clt and cltlind?
+        :param neighbor: radius - use neighboring nodes when clt_map
         """
         thr_types = [
             "quantile", "radius", "mean", "inv_som",
@@ -90,13 +101,13 @@ class SomDetect:
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
         if threshold == "quantile" or threshold == "mean" or threshold == "radius":
-            return MappingScore(threshold, self.som_grid, self.som_te, self.net)
+            return MappingScore(threshold, self.som_grid, self.som_te, self.net, neighbor) # threshold with mapping
         elif threshold == "inv_som":
-            return EmptyScore(threshold, self.som_grid, self.som_te, self.net, self.topo, self.h, self.d, self.decay)
+            return EmptyScore(threshold, self.som_grid, self.som_te, self.net, self.topo, self.h, self.d, self.decay) # threshold without mapping
         elif threshold == "kmeans" or threshold == "hclust":
             return ClusterScore(threshold, self.som_grid, self.som_te, self.net)
         elif threshold == "cltlind":
-            return ZtestScore(threshold, self.som_grid, self.som_te, self.net, self.som_tr)
+            return ZtestScore(threshold, self.som_grid, self.som_te, self.net, self.som_tr, level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
         else:
             raise ValueError("Invalid 'threshold'")
 
@@ -119,9 +130,9 @@ class SomDetect:
         self.net = self.som_grid.net
 
     def detect_anomaly(
-            self, label = None, threshold = "cltlind",
-            level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False,
-            bootstrap = 1, clt_map = False, neighbor = None
+        self, label = None, threshold = "cltlind",
+        level = .9, clt_test = "gai", mfdr = None, power = None, log_stat = False,
+        bootstrap = 1, clt_map = False, neighbor = None
     ):
         """
         :param label: anomaly and normal label list
@@ -141,29 +152,9 @@ class SomDetect:
         if len(label) != 2:
             raise ValueError("label should have 2 elements")
         self.label = label
-        thr_types = [
-            "quantile", "radius", "mean", "inv_som",
-            "kmeans", "hclust",
-            "cltlind"
-        ]
-        if threshold not in thr_types:
-            raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
-        test_types = ["bon", "bh", "invest", "gai", "lord"]
-        if clt_test not in test_types:
-            raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
         som_anomaly = None
-        detector = self.init_detector(threshold)
-        # threshold with mapping
-        if threshold == "quantile" or threshold == "mean" or threshold == "radius":
-            som_anomaly = detector.is_anomaly(neighbor)
-        # threshold without mapping
-        elif threshold == "inv_som":
-            som_anomaly = detector.is_anomaly()
-        elif threshold == "kmeans" or threshold == "hclust":
-            som_anomaly = detector.is_anomaly()
-        elif threshold == "cltlind":
-            som_anomaly = detector.is_anomaly(level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
-        # label
+        detector = self.init_detector(threshold, level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
+        som_anomaly = detector.is_anomaly() # True or False
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 
@@ -348,6 +339,12 @@ from abc import ABC, abstractmethod
 
 class ScoreStrategy(ABC):
     def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net):
+        """
+        :param threshold: threshold for detection - mean, quantile, radius, kmeans, ztest, clt, cltlind, or anova
+        :param som_grid: kohonen class of train data
+        :param som_te: SomData class for test data
+        :param net: Weight of som_grid
+        """
         self.threshold = threshold
         self.som_grid = som_grid
         self.som_te = som_te
@@ -384,19 +381,23 @@ class ScoreStrategy(ABC):
             return np.sqrt(np.trace(ss))
 
 class MappingScore(ScoreStrategy):
-    def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net):
+    def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net, neighbor):
         """
-        :param som_grid: kohonen class
+        :param threshold: threshold for detection - quantile, radius, or mean
+        :param som_grid: kohonen class of train data
+        :param som_te: SomData class for test data
+        :param net: Weight of som_grid
+        :param neighbor: radius
         """
         super().__init__(threshold, som_grid, som_te, net)
         thr_types = ["quantile", "radius", "mean"]
         if threshold not in thr_types:
             raise ValueError("Invalid threshold. Expected one of: %s" % thr_types)
+        self.neighbor = neighbor
 
-    def is_anomaly(self, neighbor):
+    def is_anomaly(self):
         """
-        :param neighbor: radius - use neighboring nodes when clt_map
-        :return: Anomaly detection
+        :return: Anomaly?
         """
         anomaly_threshold = None
         dist_anomaly = None
@@ -423,7 +424,7 @@ class MappingScore(ScoreStrategy):
             anomaly_threshold = np.mean(self.som_grid.dist_normal)
             som_anomaly = dist_anomaly > anomaly_threshold
         elif self.threshold == "radius":
-            anomaly_threshold = neighbor
+            anomaly_threshold = self.neighbor
             normal_project = np.unique(self.som_grid.project)
             from_normal = self.som_grid.dci[normal_project.astype(int), :]
             anomaly_project = np.full(
@@ -440,6 +441,7 @@ class MappingScore(ScoreStrategy):
 class EmptyScore(ScoreStrategy):
     def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net, topo, neighbor, dist, decay):
         """
+        :param threshold: threshold for detection - quantile, radius, or mean
         :param som_grid: kohonen class of train data
         :param som_te: SomData class for test data
         :param net: Weight of som_grid
@@ -447,7 +449,6 @@ class EmptyScore(ScoreStrategy):
         :param neighbor: Neighborhood function - gaussian or bubble
         :param dist: Distance function - frobenius, nuclear, or
         :param decay: decaying learning rate and radius - exponential or linear
-        :return: Anomaly?
         """
         super().__init__(threshold, som_grid, som_te, net)
         self.topo = topo
@@ -488,6 +489,12 @@ class EmptyScore(ScoreStrategy):
 
 class ClusterScore(ScoreStrategy):
     def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net):
+        """
+        :param threshold: threshold for detection - quantile, radius, or mean
+        :param som_grid: kohonen class of train data
+        :param som_te: SomData class for test data
+        :param net: Weight of som_grid
+        """
         super().__init__(threshold, som_grid, som_te, net)
     
     def is_anomaly(self):
@@ -570,16 +577,18 @@ class ClusterScore(ScoreStrategy):
         return np.delete(divisive, 0)
 
 class ZtestScore(ScoreStrategy):
-    def __init__(self, threshold, som_grid: 'kohonen', som_te: 'SomData', net, som_tr: 'SomData'):
-        super().__init__(threshold, som_grid, som_te, net)
-        self.som_tr = som_tr
-    
-    def is_anomaly(
-        self, level = .9, clt_test = "gai", mfdr = None,
+    def __init__(
+        self, threshold, som_grid: 'kohonen', som_te: 'SomData', net, som_tr: 'SomData',
+        level = .9, clt_test = "gai", mfdr = None,
         power = None, log_stat = False,
         bootstrap = 1, clt_map = False, neighbor = None
     ):
         """
+        :param threshold: threshold for detection - quantile, radius, or mean
+        :param som_grid: kohonen class of train data
+        :param som_te: SomData class for test data
+        :param net: Weight of som_grid
+        :param som_tr SomData class for train data
         :param level: what quantile to use. Change this for ztest, clt, or cltlind threshold
         :param clt_test: what multiple testing method to use for clt and cltlind - bh, invest, gai, or lord
         :param mfdr: eta of alpha-investing
@@ -588,12 +597,23 @@ class ZtestScore(ScoreStrategy):
         :param bootstrap: bootstrap sample number. If 1, bootstrap not performed
         :param clt_map: use mapped codebook for clt and cltlind?
         :param neighbor: radius - use neighboring nodes when clt_map
-        :return: Anomaly?
         """
+        super().__init__(threshold, som_grid, som_te, net)
+        self.som_tr = som_tr
+        self.level = level
         test_types = ["bon", "bh", "invest", "gai", "lord"]
         if clt_test not in test_types:
             raise ValueError("Invalid clt_test. Expected on of: %s" % test_types)
-        if clt_map:
+        self.clt_test = clt_test
+        self.mfdr = mfdr
+        self.power = power
+        self.log_stat = log_stat
+        self.bootstrap = bootstrap
+        self.clt_map = clt_map
+        self.neighbor = neighbor
+    
+    def is_anomaly(self):
+        if self.clt_map:
             if self.som_grid.project is None:
                 normal_distance = np.asarray(
                     [self.som_grid.dist_weight(self.som_tr.window_data, i) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mapping")]
@@ -603,9 +623,9 @@ class ZtestScore(ScoreStrategy):
             # mapped nodes
             normal_project, proj_count = np.unique(self.som_grid.project, return_counts = True)
             # neighboring nodes
-            if neighbor is not None:
+            if self.neighbor is not None:
                 proj_dist = np.argwhere(
-                    self.som_grid.dci[normal_project.astype(int), :] <= neighbor
+                    self.som_grid.dci[normal_project.astype(int), :] <= self.neighbor
                 )
                 normal_project, neighbor_count = np.unique(proj_dist[:, 0], return_counts = True)
                 proj_count = np.repeat(proj_count, neighbor_count)
@@ -615,13 +635,13 @@ class ZtestScore(ScoreStrategy):
         else:
             net_stand = self.net
             proj_count = np.repeat(1, self.net.shape[0])
-        if bootstrap == 1:
+        if self.bootstrap == 1:
             normal_distance = np.asarray(
                 [self.dist_normal(net_stand, j) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
             )
         else:
             normal_distance = np.asarray(
-                [self.dist_bootstrap(net_stand, j, bootstrap) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
+                [self.dist_bootstrap(net_stand, j, self.bootstrap) for j in tqdm(range(net_stand.shape[0]), desc = "pseudo-population")]
             )
         # online set
         dist_anomaly = np.asarray(
@@ -636,17 +656,17 @@ class ZtestScore(ScoreStrategy):
         # )
         # not iid - lindeberg clt sn = sqrt(sum(sigma2 ** 2)) => sum(xi - mui) / sn -> N(0, 1)
         self.dstat = net_stand.shape[0] * (dist_anomaly - clt_mean) / sn
-        if log_stat:
+        if self.log_stat:
             self.dstat = np.log2(self.dstat + 1)
         # pvalue
         pvalue = 1 - norm.cdf(self.dstat)
         # multiple test
-        if clt_test == "bon":
-            alpha = 1 - level
+        if self.clt_test == "bon":
+            alpha = 1 - self.level
             # pj <= alpha * 2^(-j)
             som_anomaly = pvalue <= alpha * pow(.5, np.arange(self.som_te.window_data.shape[0]) + 1)
-        elif clt_test == "bh":
-            alpha = 1 - level
+        elif self.clt_test == "bh":
+            alpha = 1 - self.level
             alpha /= self.som_te.window_data.shape[0]
             # Benjamini–Hochberg - i * alpha / N for ordered p-value
             alpha *= np.arange(self.som_te.window_data.shape[0]) + 1
@@ -658,12 +678,12 @@ class ZtestScore(ScoreStrategy):
             if test.shape[0] != 0:
                 test_k = np.max(test)
                 som_anomaly[p_ordered[:(test_k + 1)]] = True
-        elif clt_test == "invest":
-            alpha = 1 - level
-            if mfdr is None:
-                mfdr = 1 - alpha
+        elif self.clt_test == "invest":
+            alpha = 1 - self.level
+            if self.mfdr is None:
+                self.mfdr = 1 - alpha
             # alpha-investing
-            wealth = alpha * mfdr
+            wealth = alpha * self.mfdr
             som_anomaly = True
             k = 0
             for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "alpha-investing"):
@@ -675,15 +695,15 @@ class ZtestScore(ScoreStrategy):
                 # wealth += (1 - rj) * np.log(1 - alphaj) + rj * (alpha + np.log(1 - pvalue[j]))
                 k = (1 - rj) * k + rj * h0 # the most recently rejected hypothesis
             som_anomaly = som_anomaly[1:]
-        elif clt_test == "gai":
-            alpha = 1 - level
+        elif self.clt_test == "gai":
+            alpha = 1 - self.level
             # upper bound on the power
-            if power is None:
-                power = 1
-            if mfdr is None:
-                mfdr = 1 - alpha
+            if self.power is None:
+                self.power = 1
+            if self.mfdr is None:
+                self.mfdr = 1 - alpha
             # W(0)
-            wealth = alpha * mfdr
+            wealth = alpha * self.mfdr
             som_anomaly = True
             for j in tqdm(range(self.som_te.window_data.shape[0]), desc = "gai"):
                 # phi(k) = w(k - 1) / 10, k = 1, 2, ...
@@ -692,18 +712,18 @@ class ZtestScore(ScoreStrategy):
                 phi = wealth / 10
                 # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
                 # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
-                alphaj = (phi * power) / (phi + power)
+                alphaj = (phi * self.power) / (phi + self.power)
                 rj = pvalue[j] <= alphaj
                 som_anomaly = np.append(som_anomaly, rj)
                 # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
-                psi = np.minimum(phi / power + alpha, phi / alphaj + alpha - 1)
+                psi = np.minimum(phi / self.power + alpha, phi / alphaj + alpha - 1)
                 # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
                 wealth += -phi + rj * psi
             som_anomaly = som_anomaly[1:]
-        elif clt_test == "lord":
-            alpha = 1 - level
-            if mfdr is None:
-                mfdr = 1 - alpha
+        elif self.clt_test == "lord":
+            alpha = 1 - self.level
+            if self.mfdr is None:
+                self.mfdr = 1 - alpha
             som_anomaly = True
             # W(0)
             wealth = np.array([alpha * mfdr])
@@ -737,8 +757,11 @@ class ZtestScore(ScoreStrategy):
         :return: average distance between online data set and weight matrix
         """
         net_num = codebook.shape[0]
+        # dist_wt = np.asarray(
+        #     [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
+        # )
         dist_wt = np.asarray(
-            [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in tqdm(range(net_num), desc = "averaging")]
+            [self.dist_mat(self.som_te.window_data[index, :, :], codebook[i, :, :]) for i in range(net_num)]
         )
         if w is None:
             w = np.repeat(1, net_num)
@@ -750,8 +773,11 @@ class ZtestScore(ScoreStrategy):
         :param node: node index
         :return: average and sd of distances between normal som matrix and chosen weight matrix
         """
+        # dist_wt = np.asarray(
+        #     [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
+        # )
         dist_wt = np.asarray(
-            [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in tqdm(range(self.som_tr.window_data.shape[0]), desc = "mean and sd")]
+            [self.dist_mat(codebook[node, :, :], self.som_tr.window_data[i, :, :]) for i in range(self.som_tr.window_data.shape[0])]
         )
         return np.average(dist_wt), np.var(dist_wt)
     

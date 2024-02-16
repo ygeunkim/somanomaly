@@ -160,7 +160,8 @@ class kohonen:
             self.alpha = self.decay(init_rate, i + 1, rate_constant)
             # neighboring nodes (includes BMU)
             neighbor_neuron = np.argwhere(bmu_dist <= self.sigma).flatten()
-            for k in tqdm(range(neighbor_neuron.shape[0]), desc = "updating"):
+            # for k in tqdm(range(neighbor_neuron.shape[0]), desc = "updating"):
+            for k in range(neighbor_neuron.shape[0]):
                 node_id = neighbor_neuron[k]
                 hci = self.neighborhood(bmu_dist[node_id], self.sigma)
                 # update codebook matrices of neighboring nodes
