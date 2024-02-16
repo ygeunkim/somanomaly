@@ -1,6 +1,7 @@
 # <img alt="SomAnomaly" src="docs/somanomaly_icon_v2.png" height="60">
 
 <!-- badges: start -->
+[![IFIPSEC-DOI](https://img.shields.io/badge/IFIP--SEC-10.1007/978--3--030--78120--0_25-brightgreen.svg)](https://doi.org/10.1007/978-3-030-78120-0_25)
 [![DOI](https://zenodo.org/badge/198335097.svg)](https://zenodo.org/badge/latestdoi/198335097)
 <!-- badges: end -->
 
@@ -54,7 +55,13 @@ The following is a description of each argument.
 
 #### Input file
 
-For now, this function reads only `*.csv` files using `pandas.read_csv()`
+You can use the following file formats, so as when saving.
+
+- `csv`
+- `xlsx`
+- `parquet`
+- `feather`
+- `json`
 
 ```
 normal  Normal dataset file
