@@ -2,8 +2,26 @@ import argparse
 import time
 import numpy as np
 import pandas as pd
+import re
 from somanomaly.detector import SomDetect
 from sklearn.metrics import classification_report
+
+def load_data(path):
+    if re.search(r'\.csv$', path, re.IGNORECASE):
+        return pd.read_csv(path, header = None)
+    elif re.search(r'\.parquet$', path, re.IGNORECASE):
+        return pd.read_parquet(path)
+    elif re.search(r'\.feather$', path, re.IGNORECASE):
+        return pd.read_feather(path)
+    elif re.search(r'\.xlsx$', path, re.IGNORECASE):
+        return pd.read_excel(path, header = None)
+    elif re.search(r'\.json$', path, re.IGNORECASE):
+        return pd.read_json(path)
+    # elif re.search(r'\.pkl$', file_path, re.IGNORECASE):
+    #     with open(file_path, 'rb') as file:
+    #         return pickle.load(file)
+    else:
+        raise ValueError("Unsupported file format")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -344,7 +362,7 @@ def main():
     # evaluation
     if normal_list is None:
         if print_eval:
-            true_anomaly = pd.read_csv(true_file, header = None)
+            true_anomaly = load_data(true_file)
             true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
             print(
                 classification_report(
@@ -364,7 +382,7 @@ def main():
             print("Plotting time: %.2f seconds" % (time.time() - plot_start))
     else:
         if print_eval:
-            true_anomaly = pd.read_csv(true_file, header=None)
+            true_anomaly = load_data(true_file)
             true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
             print(
                 classification_report(

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import re
 from tqdm import tqdm
 
 
@@ -41,7 +42,28 @@ class SomData:
         :return: numpy converted from pandas
         """
         if cols is None:
-            df = pd.read_csv(path)
+            if re.search(r'\.csv$', path, re.IGNORECASE):
+                df = pd.read_csv(path)
+            elif re.search(r'\.parquet$', path, re.IGNORECASE):
+                df = pd.read_parquet(path)
+            elif re.search(r'\.feather$', path, re.IGNORECASE):
+                df = pd.read_feather(path)
+            elif re.search(r'\.xlsx$', path, re.IGNORECASE):
+                df = pd.read_excel(path)
+            elif re.search(r'\.json$', path, re.IGNORECASE):
+                df = pd.read_json(path)
         else:
-            df = pd.read_csv(path, usecols = cols)
+            if re.search(r'\.csv$', path, re.IGNORECASE):
+                df = pd.read_csv(path, usecols = cols)
+            elif re.search(r'\.parquet$', path, re.IGNORECASE):
+                df = pd.read_parquet(path)
+                df = df.iloc[:, list(cols)]
+            elif re.search(r'\.feather$', path, re.IGNORECASE):
+                df = pd.read_feather(path)
+                df = df.iloc[:, list(cols)]
+            elif re.search(r'\.xlsx$', path, re.IGNORECASE):
+                df = pd.read_excel(path, usecols = cols)
+            elif re.search(r'\.json$', path, re.IGNORECASE):
+                df = pd.read_json(path)
+                df = df.iloc[:, list(cols)]
         return pd.DataFrame.to_numpy(df)
