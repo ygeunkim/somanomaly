@@ -2,8 +2,40 @@ import argparse
 import time
 import numpy as np
 import pandas as pd
+import re
 from somanomaly.detector import SomDetect
 from sklearn.metrics import classification_report
+
+def load_data(path):
+    if re.search(r'\.csv$', path, re.IGNORECASE):
+        return pd.read_csv(path, header = None)
+    elif re.search(r'\.parquet$', path, re.IGNORECASE):
+        return pd.read_parquet(path)
+    elif re.search(r'\.feather$', path, re.IGNORECASE):
+        return pd.read_feather(path)
+    elif re.search(r'\.xlsx$', path, re.IGNORECASE):
+        return pd.read_excel(path, header = None)
+    elif re.search(r'\.json$', path, re.IGNORECASE):
+        return pd.read_json(path)
+    # elif re.search(r'\.pkl$', file_path, re.IGNORECASE):
+    #     with open(file_path, 'rb') as file:
+    #         return pickle.load(file)
+    else:
+        raise ValueError("Unsupported file format")
+
+def save_data(df, path):
+    if re.search(r'\.csv$', path, re.IGNORECASE):
+        df.to_csv(path, index = False, header = False)
+    elif re.search(r'\.parquet$', path, re.IGNORECASE):
+        df.to_parquet(path, index = False)
+    elif re.search(r'\.feather$', path, re.IGNORECASE):
+        df.reset_index(drop = True).to_feather(path)
+    elif re.search(r'\.xlsx$', path, re.IGNORECASE):
+        df.to_excel(path, index = False, header = False)
+    elif re.search(r'\.json$', path, re.IGNORECASE):
+        df.to_json(path, orient = 'records')
+    else:
+        raise ValueError("Unsupported file format")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -270,12 +302,15 @@ def main():
                                    bootstrap = boot, clt_map = proj, neighbor = neighbor_node)
         som_anomaly.label_anomaly()
         anomaly_df = pd.DataFrame({".pred": som_anomaly.anomaly})
-        anomaly_df.to_csv(output_file, index = False, header = False)
+        # anomaly_df.to_csv(output_file, index = False, header = False)
+        save_data(anomaly_df, output_file)
         if dstat_file is not None:
             dstat_df = pd.DataFrame({".som": som_anomaly.dstat})
-            dstat_df.to_csv(dstat_file, index = False, header = False)
+            # dstat_df.to_csv(dstat_file, index = False, header = False)
+            save_data(dstat_df, dstat_file)
             window_df = pd.DataFrame({".pred": som_anomaly.window_anomaly})
-            window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
+            # window_df.to_csv(dstat_file.replace(".csv", "_pred.csv"), index = False, header = False)
+            save_data(window_df, re.sub(r'(\.\w+)$', r'_pred\1', dstat_file))
     else:
         anomaly_pred = SomDetect.detect_block(
             normal_list, online_list, col_list,
@@ -284,7 +319,8 @@ def main():
             epoch, init_rate, init_radius, label, ztest_opt, multiple_test, eta, rho, stat_log
         )
         anomaly_df = pd.DataFrame({".pred": anomaly_pred})
-        anomaly_df.to_csv(output_file, index = False, header = False)
+        # anomaly_df.to_csv(output_file, index = False, header = False)
+        save_data(anomaly_df, output_file)
     print("")
     print("process for %.2f seconds================================================\n" %(time.time() - start_time))
     # files
@@ -344,7 +380,7 @@ def main():
     # evaluation
     if normal_list is None:
         if print_eval:
-            true_anomaly = pd.read_csv(true_file, header = None)
+            true_anomaly = load_data(true_file)
             true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
             print(
                 classification_report(
@@ -364,7 +400,7 @@ def main():
             print("Plotting time: %.2f seconds" % (time.time() - plot_start))
     else:
         if print_eval:
-            true_anomaly = pd.read_csv(true_file, header=None)
+            true_anomaly = load_data(true_file)
             true_anomaly = pd.DataFrame.to_numpy(true_anomaly)
             print(
                 classification_report(

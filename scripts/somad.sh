@@ -10,12 +10,10 @@ arg1=$1
 arg2=$2
 arg3=$3
 arg4=$4
-arg5=$5
 
 echo "Train data: $arg1"
 echo "Test data: $arg2"
 echo "True label: $arg3"
-echo "Read col-range: $arg4"
-echo "Output file: $arg5"
+echo "Output file: $arg4"
 
-python main.py -e $arg3 -c $arg4 $arg1 $arg2 $arg5
+python main.py -e $arg3 $arg1 $arg2 $arg4
