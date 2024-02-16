@@ -9,8 +9,8 @@ attrs==23.2.0
 Babel==2.14.0
 beautifulsoup4==4.12.3
 bleach==6.1.0
-build @ file:///private/tmp/python-build-20231113-5137-1p4zrl/build-1.0.3
-certifi @ file:///private/tmp/python-certifi-20240201-4501-9cw706/certifi-2024.2.2
+build==1.0.3
+certifi==2024.2.2
 cffi==1.15.1
 charset-normalizer==3.3.2
 comm==0.2.1
@@ -20,12 +20,12 @@ cycler==0.11.0
 debugpy==1.8.0
 decorator==5.1.1
 defusedxml==0.7.1
-distlib @ file:///private/tmp/python-distlib-20231212-4774-clg0vf/distlib-0.3.8
+distlib==0.3.8
 executing==2.0.1
 fastjsonschema==2.19.1
 fastparquet==2024.2.0
-filelock @ file:///private/tmp/python-filelock-20231112-5412-u6v39j/filelock-3.13.1/dist/filelock-3.13.1-py3-none-any.whl#sha256=57dbda9b35157b05fb3e58ee91448612eb674172fab98ee235ccb0b5bee19a1c
-fonttools==4.42.0
+filelock==3.13.1
+fonttools==4.49.0
 fqdn==1.5.1
 fsspec==2024.2.0
 h11==0.14.0
@@ -56,7 +56,7 @@ jupyterlab-widgets==3.0.9
 jupyterlab_pygments==0.3.0
 jupyterlab_server==2.25.2
 kiwisolver==1.4.4
-lit @ file:///private/tmp/lit-20231128-5138-9ta52w/lit-17.0.6
+lit==17.0.6
 MarkupSafe==2.1.5
 matplotlib==3.7.2
 matplotlib-inline==0.1.6
@@ -69,7 +69,7 @@ nest-asyncio==1.6.0
 networkx==3.2.1
 notebook==7.0.7
 notebook_shim==0.2.3
-numpy @ file:///private/tmp/numpy-20240206-5948-gu6j5s/numpy-1.26.4
+numpy==1.26.4
 overrides==7.7.0
 packaging==23.1
 pandas==2.0.3
@@ -77,8 +77,8 @@ pandocfilters==1.5.1
 parso==0.8.3
 patsy==0.5.6
 pexpect==4.9.0
-Pillow==10.0.0
-platformdirs @ file:///private/tmp/python-platformdirs-20240130-4949-bsapfn/platformdirs-4.2.0
+pillow==10.2.0
+platformdirs==4.2.0
 plotly==5.18.0
 prometheus-client==0.19.0
 prompt-toolkit==3.0.43
@@ -89,7 +89,7 @@ pure-eval==0.2.2
 pycparser==2.21
 Pygments==2.16.1
 pyparsing==3.0.9
-pyproject_hooks @ file:///private/tmp/python-pyproject-hooks-20231007-5328-17riy9v/pyproject_hooks-1.0.0
+pyproject_hooks==1.0.0
 python-dateutil==2.8.2
 python-json-logger==2.0.7
 pytz==2023.3
