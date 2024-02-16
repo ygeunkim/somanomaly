@@ -25,7 +25,7 @@ executing==2.0.1
 fastjsonschema==2.19.1
 fastparquet==2024.2.0
 filelock @ file:///private/tmp/python-filelock-20231112-5412-u6v39j/filelock-3.13.1/dist/filelock-3.13.1-py3-none-any.whl#sha256=57dbda9b35157b05fb3e58ee91448612eb674172fab98ee235ccb0b5bee19a1c
-fonttools==4.42.0
+fonttools==4.43.0
 fqdn==1.5.1
 fsspec==2024.2.0
 h11==0.14.0
