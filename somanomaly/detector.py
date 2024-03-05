@@ -220,6 +220,8 @@ class SomDetect:
         x = mat1 - mat2
         if self.som_grid.dist_func == "frobenius":
             return np.linalg.norm(x, "fro")
+        if self.som_grid.dist_func == "spectral":
+            return np.linalg.norm(x, 2)
         elif self.som_grid.dist_func == "nuclear":
             return np.linalg.norm(x, "nuc")
         elif self.som_grid.dist_func == "mahalanobis":
@@ -364,6 +366,8 @@ class ScoreStrategy(ABC):
         x = mat1 - mat2
         if self.som_grid.dist_func == "frobenius":
             return np.linalg.norm(x, "fro")
+        if self.som_grid.dist_func == "spectral":
+            return np.linalg.norm(x, 2)
         elif self.som_grid.dist_func == "nuclear":
             return np.linalg.norm(x, "nuc")
         elif self.som_grid.dist_func == "mahalanobis":

@@ -68,7 +68,7 @@ class kohonen:
             raise ValueError("Invalid neighbor. Expected one of: %s" % neighbor_types)
         self.neighbor_func = neighbor
         # Distance function
-        dist_type = ["frobenius", "nuclear", "mahalanobis", "eros"]
+        dist_type = ["frobenius", "spectral", "nuclear", "mahalanobis", "eros"]
         if dist not in dist_type:
             raise ValueError("Invalid dist. Expected one of: %s" % dist_type)
         self.dist_func = dist
@@ -189,6 +189,8 @@ class kohonen:
         """
         if self.dist_func == "frobenius":
             return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "fro")
+        if self.dist_func == "spectral":
+            return np.linalg.norm(data[index, :, :] - self.net[node, :, :], 2)
         elif self.dist_func == "nuclear":
             return np.linalg.norm(data[index, :, :] - self.net[node, :, :], "nuc")
         elif self.dist_func == "mahalanobis":
