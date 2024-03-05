@@ -120,7 +120,7 @@ def main():
         "-m", "--metric",
         type = str,
         default = "frobenius",
-        help = "Distance function - frobenius (default), nuclear, mahalanobis, or eros"
+        help = "Distance function - frobenius (default), spectral, nuclear, mahalanobis, or eros"
     )
     parser.add_argument(
         "-d", "--decay",
