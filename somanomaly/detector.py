@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 from scipy.stats import chi2
 from scipy.stats import norm
 from scipy.stats import f
+from scipy.optimize import minimize
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
 from somanomaly.kohonen import kohonen
 from somanomaly.window import SomData
-
 
 class SomDetect:
     """
@@ -715,12 +715,18 @@ class ZtestScore(ScoreStrategy):
                 # relative200 scheme - until 200 tests
                 phi = wealth / 10
                 # alpha(k) s.t. phi(k) / rho(k) = phi(k) / alpha(k) - 1
+                gai_optim = GaiOptim(phi, alpha, self.dstat[j])
+                alphaj, psi, self.power = gai_optim.optimize(
+                    alpha_init = phi / (1 + phi),
+                    psi_init = phi + alpha,
+                    power_init = 1
+                )
                 # rho(k) = 1 => alpha(k) = phi(k) / (phi(k) + 1)
-                alphaj = (phi * self.power) / (phi + self.power)
+                # alphaj = (phi * self.power) / (phi + self.power)
                 rj = pvalue[j] <= alphaj
                 som_anomaly = np.append(som_anomaly, rj)
                 # psi(k) = min(phi(k) / rho(k) + alpha, phi(k) / alpha(k) + alpha - 1)
-                psi = np.minimum(phi / self.power + alpha, phi / alphaj + alpha - 1)
+                # psi = np.minimum(phi / self.power + alpha, phi / alphaj + alpha - 1)
                 # w(k) = w(k - 1) - phi(k) + R(k)psi(k)
                 wealth += -phi + rj * psi
             som_anomaly = som_anomaly[1:]
@@ -817,3 +823,48 @@ class ZtestScore(ScoreStrategy):
             dist_moment[b, 0] = np.average(dist_b)
             dist_moment[b, 1] = np.var(dist_b)
         return np.average(dist_moment, axis = 0)    
+
+class GaiOptim:
+    def __init__(self, phi, alpha, stat):
+        self.phi = phi
+        self.alpha = alpha
+        self.stat = stat
+    
+    def ero(self, x):
+        _, psi, _ = x
+        return -psi
+    
+    def ero_constraint_wealth1(self, x):
+        _, psi, power = x
+        return self.phi / power + self.alpha - psi
+    
+    def ero_constraint_wealth2(self, x):
+        alpha_j, psi, _ = x
+        return self.phi / alpha_j + self.alpha - 1 - psi
+
+    def ero_constraint_reward(self, x):
+        alpha_j, _, power = x
+        return self.phi / power - self.phi / alpha_j + 1
+
+    def ero_constraint_power(self, x):
+        alpha_j, _, power = x
+        return power - (1 - norm.cdf(norm.ppf(1 - alpha_j) - self.stat))
+    
+    def optimize(self, alpha_init, psi_init, power_init):
+        # optim_bound = [(1e-3, .9), (None, None), (0, None)]
+        constraints = [
+            {'type': 'eq', 'fun': self.ero_constraint_wealth1},
+            {'type': 'eq', 'fun': self.ero_constraint_wealth2},
+            {'type': 'eq', 'fun': self.ero_constraint_reward},
+            {'type': 'eq', 'fun': self.ero_constraint_power},
+        ]
+        # optim_init = [alpha_init, psi_init, power_init]
+        optim = minimize(
+            self.ero,
+            x0 = [alpha_init, psi_init, power_init],
+            method = 'SLSQP',
+            bounds = [(1e-3, .9), (None, None), (0, None)],
+            constraints = constraints
+        )
+        return optim.x
+    
