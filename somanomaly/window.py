@@ -66,4 +66,5 @@ class SomData:
             elif re.search(r'\.json$', path, re.IGNORECASE):
                 df = pd.read_json(path)
                 df = df.iloc[:, list(cols)]
+        df = df.select_dtypes(include = ['number'])
         return pd.DataFrame.to_numpy(df)
