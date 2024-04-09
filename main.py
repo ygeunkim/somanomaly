@@ -305,7 +305,7 @@ def main():
         # anomaly_df.to_csv(output_file, index = False, header = False)
         save_data(anomaly_df, output_file)
         if dstat_file is not None:
-            dstat_df = pd.DataFrame({".som": som_anomaly.dstat})
+            dstat_df = pd.DataFrame({".som": som_anomaly.detector.dstat})
             # dstat_df.to_csv(dstat_file, index = False, header = False)
             save_data(dstat_df, dstat_file)
             window_df = pd.DataFrame({".pred": som_anomaly.window_anomaly})

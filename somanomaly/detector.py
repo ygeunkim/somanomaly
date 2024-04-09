@@ -66,6 +66,7 @@ class SomDetect:
             tmp_te = self.som_te.window_data.reshape((-1, self.som_te.window_data.shape[2]))
             tmp_te = scaler.fit_transform(tmp_te).reshape(self.som_te.window_data.shape)
             self.som_te.window_data = tmp_te
+        self.detector = None
         # anomaly
         self.label = None
         self.window_anomaly = np.empty(self.som_te.window_data.shape[0])
@@ -153,8 +154,8 @@ class SomDetect:
             raise ValueError("label should have 2 elements")
         self.label = label
         som_anomaly = None
-        detector = self.init_detector(threshold, level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
-        som_anomaly = detector.is_anomaly() # True or False
+        self.detector = self.init_detector(threshold, level, clt_test, mfdr, power, log_stat, bootstrap, clt_map, neighbor)
+        som_anomaly = self.detector.is_anomaly() # True or False
         self.window_anomaly[som_anomaly] = self.label[0]
         self.window_anomaly[np.logical_not(som_anomaly)] = self.label[1]
 
